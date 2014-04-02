@@ -1,0 +1,11 @@
+Generic Sensor Interface for OpenWSN Motes
+
+Generic communication interface between the wireless board (mote) and the sensor board. 
+Any kind of sensor board can be connected to the mote using this specification given 
+it provides a SPI peripheral, one input pin with interrupt capability and one digital output. 
+The sensor board must implement a special register set from which all required information can be retrieved.
+
+Protocol: http://is.gd/wuQorh
+
+
+

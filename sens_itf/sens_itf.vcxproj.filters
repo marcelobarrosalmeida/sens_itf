@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="os">
+      <UniqueIdentifier>{830896e4-a2b9-4321-972e-d0d1a9afc4b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sens_itf">
+      <UniqueIdentifier>{577b5d62-b8e6-4faf-b17f-2cd955b8dde8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="owsn">
+      <UniqueIdentifier>{87eed68f-56c1-495b-a8d7-be30586671ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="unity">
+      <UniqueIdentifier>{7da61a55-1a52-4652-9f15-bf847e408067}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{b674d87c-4dab-4639-8cbe-fec60fc2c94a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\owsn\board_info.h">
+      <Filter>owsn</Filter>
+    </ClInclude>
+    <ClInclude Include="..\owsn\board.h">
+      <Filter>owsn</Filter>
+    </ClInclude>
+    <ClInclude Include="..\owsn\leds.h">
+      <Filter>owsn</Filter>
+    </ClInclude>
+    <ClInclude Include="..\owsn\debugpins.h">
+      <Filter>owsn</Filter>
+    </ClInclude>
+    <ClInclude Include="..\owsn\openwsn.h">
+      <Filter>owsn</Filter>
+    </ClInclude>
+    <ClInclude Include="..\owsn\scheduler.h">
+      <Filter>owsn</Filter>
+    </ClInclude>
+    <ClInclude Include="..\util\buf_io.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\util\crc16.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="sens_itf.h">
+      <Filter>sens_itf</Filter>
+    </ClInclude>
+    <ClInclude Include="sens_util.h">
+      <Filter>sens_itf</Filter>
+    </ClInclude>
+    <ClInclude Include="..\os\os_defs.h">
+      <Filter>os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\os\os_timer.h">
+      <Filter>os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\unity\unity.h">
+      <Filter>unity</Filter>
+    </ClInclude>
+    <ClInclude Include="..\unity\unity_internals.h">
+      <Filter>unity</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\owsn\board.c">
+      <Filter>owsn</Filter>
+    </ClCompile>
+    <ClCompile Include="..\owsn\leds.c">
+      <Filter>owsn</Filter>
+    </ClCompile>
+    <ClCompile Include="..\owsn\debugpins.c">
+      <Filter>owsn</Filter>
+    </ClCompile>
+    <ClCompile Include="..\owsn\scheduler.c">
+      <Filter>owsn</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\buf_io.c">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\util\crc16.c">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="sens_itf.c">
+      <Filter>sens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="sens_itf_mote.c">
+      <Filter>sens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="sens_itf_sensor.c">
+      <Filter>sens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="sens_itf_unity_test.c">
+      <Filter>sens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="sens_util.c">
+      <Filter>sens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\os\os_timer.c">
+      <Filter>os</Filter>
+    </ClCompile>
+    <ClCompile Include="..\unity\unity.c">
+      <Filter>unity</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
