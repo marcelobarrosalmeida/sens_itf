@@ -60,6 +60,9 @@
     <ClInclude Include="..\unity\unity_internals.h">
       <Filter>unity</Filter>
     </ClInclude>
+    <ClInclude Include="..\os\os_kernel.h">
+      <Filter>os</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\owsn\board.c">
@@ -100,6 +103,9 @@
     </ClCompile>
     <ClCompile Include="..\unity\unity.c">
       <Filter>unity</Filter>
+    </ClCompile>
+    <ClCompile Include="..\os\os_kernel.c">
+      <Filter>os</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

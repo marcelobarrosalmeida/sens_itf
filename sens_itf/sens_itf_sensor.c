@@ -3,10 +3,10 @@
 #include "sens_itf.h"
 #include "../os/os_defs.h"
 #include "../os/os_timer.h"
+#include "../os/os_kernel.h"
 #include "sens_util.h"
 #include "../util/buf_io.h"
 #include "../util/crc16.h"
-
 
 // TODO: create fake function for SPI
 
@@ -14,6 +14,8 @@
 #define SENS_ITF_DBG_FRAME 1
 #define SENS_ITF_SENSOR_NUM_OF_POINTS 5
 
+static uint8_t main_svr_addr[SENS_ITF_SERVER_ADDR_SIZE];
+static uint8_t secon_svr_addr[SENS_ITF_SERVER_ADDR_SIZE];
 static uint8_t frame[SENS_ITF_MAX_FRAME_SIZE];
 static volatile uint8_t num_rx_bytes;
 static os_timer_t rx_trmout_timer = 0;
@@ -21,17 +23,17 @@ static volatile uint8_t process_frame;
 static sens_itf_point_ctrl_t sensor_points;
 static sens_itf_cmd_brd_id_t board_info;
 
-uint8_t sens_itf_get_point_type(uint8_t point)
+static uint8_t sens_itf_get_point_type(uint8_t point)
 {
     return sensor_points.points[point].desc.type;
 }
 
-uint8_t sens_itf_get_number_of_points(void)
+static uint8_t sens_itf_get_number_of_points(void)
 {
     return SENS_ITF_SENSOR_NUM_OF_POINTS;
 }
 
-sens_itf_cmd_point_desc_t *sens_itf_get_point_desc(uint8_t point)
+static sens_itf_cmd_point_desc_t *sens_itf_get_point_desc(uint8_t point)
 {
     sens_itf_cmd_point_desc_t *d = 0;
 
@@ -41,7 +43,7 @@ sens_itf_cmd_point_desc_t *sens_itf_get_point_desc(uint8_t point)
     return d;
 }
 
-sens_itf_cmd_point_t *sens_itf_get_point_value(uint8_t point)
+static sens_itf_cmd_point_t *sens_itf_get_point_value(uint8_t point)
 {
     sens_itf_cmd_point_t *v = 0;
 
@@ -51,7 +53,7 @@ sens_itf_cmd_point_t *sens_itf_get_point_value(uint8_t point)
     return v;
 }
 
-uint8_t sens_itf_set_point_value(uint8_t point, sens_itf_cmd_point_t *v)
+static uint8_t sens_itf_set_point_value(uint8_t point, sens_itf_cmd_point_t *v)
 {
     uint8_t ret = 0;
 
@@ -68,7 +70,7 @@ uint8_t sens_itf_set_point_value(uint8_t point, sens_itf_cmd_point_t *v)
     return ret;
 }
 
-sens_itf_cmd_brd_id_t *sens_itf_get_board_info(void)
+static sens_itf_cmd_brd_id_t *sens_itf_get_board_info(void)
 {
     return &board_info;
 }
@@ -143,8 +145,7 @@ static uint8_t sens_itf_sensor_readings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
         else
         {
             ans->hdr.status = SENS_ITF_ANS_OK;
-            sens_itf_cmd_point_t *pv = sens_itf_get_point_value(point);
-            ans->payload.point_value_cmd = *pv;
+            ans->payload.point_value_cmd = *sens_itf_get_point_value(point);
         }
         size = sens_itf_pack_cmd_res(ans, frame);
     }
@@ -175,10 +176,10 @@ static uint8_t sens_itf_check_other_cmds(sens_itf_cmd_req_t *cmd, sens_itf_cmd_r
             ans->payload.bat_charge_cmd.charge = 100; // TBD
             break;
         case SENS_ITF_REGMAP_SVR_MAIN_ADDR:
-            memcpy(ans->payload.svr_addr_cmd.addr,"1111222233334444" , SENS_ITF_SERVER_ADDR_SIZE); // TBD
+            memcpy(ans->payload.svr_addr_cmd.addr,main_svr_addr, SENS_ITF_SERVER_ADDR_SIZE); 
             break;
         case SENS_ITF_REGMAP_SVR_SEC_ADDR:
-            memcpy(ans->payload.svr_addr_cmd.addr,"aaaabbbbccccdddd" , SENS_ITF_SERVER_ADDR_SIZE); // TBD
+            memcpy(ans->payload.svr_addr_cmd.addr,secon_svr_addr, SENS_ITF_SERVER_ADDR_SIZE);
             break;
 
     }
@@ -198,13 +199,13 @@ static void sens_itf_process_cmd(void)
     {
         ans.hdr.addr = cmd.hdr.addr;
         size = sens_itf_sensor_check_register_map(&cmd, &ans,frame);
-        if (!size)
+        if (size == 0)
             size = sens_itf_sensor_writings(&cmd, &ans,frame);
-        if (!size)
+        if (size == 0)
             size = sens_itf_sensor_readings(&cmd, &ans,frame);
-        if (!size)
+        if (size == 0)
             size = size = sens_itf_check_other_cmds(&cmd, &ans,frame);
-        if (!size)
+        if (size == 0)
         {
             ans.hdr.status = SENS_ITF_ANS_ERROR;
             size = sens_itf_pack_cmd_res(&ans,frame);
@@ -264,7 +265,7 @@ void sens_itf_sensor_main(void)
         }
         else
         {
-            //sleep(50ms)
+            os_kernel_sleep(50);
         }
     }
 
@@ -309,7 +310,8 @@ uint8_t sens_itf_sensor_init(void)
 {
 
     sens_itf_init_point_db();
-
+    memcpy(main_svr_addr,"1212121212121212",SENS_ITF_SERVER_ADDR_SIZE);
+    memcpy(secon_svr_addr,"aabbccddeeff1122",SENS_ITF_SERVER_ADDR_SIZE);
     num_rx_bytes = 0;
     process_frame = 0;
     rx_trmout_timer = os_timer_create((os_timer_func) sens_itf_rx_tmrout_timer_func, 0, 200, 0, 0);
