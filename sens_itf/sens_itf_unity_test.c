@@ -56,49 +56,39 @@ static void test_decode_req(uint8_t expect_size, uint8_t res_size, sens_itf_cmd_
     TEST_ASSERT_EQUAL_UINT8(expect_req->crc, req->crc);
 }
 
-static void validate_point_value(uint8_t reg, sens_itf_cmd_point_t *ans)
+static void validate_point_value(sens_itf_cmd_point_t *req, sens_itf_cmd_point_t *ans)
 {
-    uint8_t point;
-    sens_itf_cmd_point_t *value;
-
-    if (reg >= SENS_ITF_REGMAP_WRITE_POINT_DATA_1)
-        point = reg - SENS_ITF_REGMAP_WRITE_POINT_DATA_1;
-    else
-        point = reg - SENS_ITF_REGMAP_READ_POINT_DATA_1;
-
-    value = sens_itf_get_point_value(point);
-
-    switch (value->type)
+    switch (req->type)
     {
     case SENS_ITF_DT_U8:
-        TEST_ASSERT_EQUAL_UINT8(value->value.u8, ans->value.u8);
+        TEST_ASSERT_EQUAL_UINT8(req->value.u8, ans->value.u8);
         break;
     case SENS_ITF_DT_S8:
-        TEST_ASSERT_EQUAL_INT8(value->value.s8, ans->value.s8);
+        TEST_ASSERT_EQUAL_INT8(req->value.s8, ans->value.s8);
         break;
     case SENS_ITF_DT_U16:
-        TEST_ASSERT_EQUAL_UINT16(value->value.u16, ans->value.u16);
+        TEST_ASSERT_EQUAL_UINT16(req->value.u16, ans->value.u16);
         break;
     case SENS_ITF_DT_S16:
-        TEST_ASSERT_EQUAL_INT16(value->value.s16, ans->value.s16);
+        TEST_ASSERT_EQUAL_INT16(req->value.s16, ans->value.s16);
         break;
     case SENS_ITF_DT_U32:
-        TEST_ASSERT_EQUAL_UINT32(value->value.u32, ans->value.u32);
+        TEST_ASSERT_EQUAL_UINT32(req->value.u32, ans->value.u32);
         break;
     case SENS_ITF_DT_S32:
-        TEST_ASSERT_EQUAL_INT32(value->value.s32, ans->value.s32); 
+        TEST_ASSERT_EQUAL_INT32(req->value.s32, ans->value.s32); 
         break;
     case SENS_ITF_DT_U64:
-        TEST_ASSERT_EQUAL_UINT64(value->value.u64, ans->value.u64);
+        TEST_ASSERT_EQUAL_UINT64(req->value.u64, ans->value.u64);
         break;
     case SENS_ITF_DT_S64:
-        TEST_ASSERT_EQUAL_INT64(value->value.s64, ans->value.s64);
+        TEST_ASSERT_EQUAL_INT64(req->value.s64, ans->value.s64);
         break;
     case SENS_ITF_DT_FLOAT:
-        TEST_ASSERT_EQUAL_FLOAT(value->value.fp32, ans->value.fp32);
+        TEST_ASSERT_EQUAL_FLOAT(req->value.fp32, ans->value.fp32);
         break;
     case SENS_ITF_DT_DOUBLE:
-        TEST_ASSERT_EQUAL_DOUBLE(value->value.fp64, ans->.value.fp64);
+        TEST_ASSERT_EQUAL_DOUBLE(req->value.fp64, ans->.value.fp64);
         break;
     default:
         break;
@@ -121,12 +111,12 @@ static void test_SENS_ITF_REGMAP_ITF_VERSION(void)
     crc = crc16_calc(frame_mote, 2);
     buf_io_put16_tl(crc, &frame_mote[2]);
 	cmd_mote.hdr.addr = SENS_ITF_REGMAP_ITF_VERSION;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
     TEST_ASSERT_EQUAL_INT8_ARRAY(frame_mote, frame, size_mote);
     
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_sensor);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
 
@@ -136,12 +126,12 @@ static void test_SENS_ITF_REGMAP_ITF_VERSION(void)
     ans_sensor.hdr.addr = SENS_ITF_REGMAP_ITF_VERSION;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     ans_sensor.payload.itf_version_cmd.version = SENS_ITF_LATEST_VERSION;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
     TEST_ASSERT_EQUAL_INT8_ARRAY(frame_sensor, frame, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_mote);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_UINT8(ans_mote.payload.itf_version_cmd.version, ans_sensor.payload.itf_version_cmd.version);
@@ -158,11 +148,11 @@ static void test_SENS_ITF_REGMAP_BRD_ID(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
 
     // encode command res
@@ -176,11 +166,11 @@ static void test_SENS_ITF_REGMAP_BRD_ID(void)
     ans_sensor.payload.brd_id_cmd.cabalities = SENS_ITF_CAPABILITIES_DISPLAY |
         SENS_ITF_CAPABILITIES_WPAN_STATUS | 
         SENS_ITF_CAPABILITIES_BATTERY_STATUS;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_INT(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_INT8_ARRAY(ans_sensor.payload.brd_id_cmd.model, ans_mote.payload.brd_id_cmd.model,SENS_ITF_MODEL_NAME_SIZE);
     TEST_ASSERT_EQUAL_INT8_ARRAY(ans_sensor.payload.brd_id_cmd.manufactor, ans_mote.payload.brd_id_cmd.manufactor,SENS_ITF_MANUF_NAME_SIZE);
@@ -202,22 +192,22 @@ static void test_SENS_ITF_REGMAP_BRD_STATUS(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
 
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     ans_sensor.payload.bat_status_cmd.status = 0xff;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_UINT8(ans_mote.payload.brd_status_cmd.status, ans_sensor.payload.brd_status_cmd.status);
 }
@@ -233,11 +223,11 @@ static void test_SENS_ITF_REGMAP_BRD_CMD(void)
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
     cmd_mote.payload.command_cmd.cmd = 0xff;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     TEST_ASSERT_EQUAL_UINT8(cmd_mote.payload.command_cmd.cmd, cmd_sensor.payload.command_cmd.cmd);
 
@@ -245,11 +235,11 @@ static void test_SENS_ITF_REGMAP_BRD_CMD(void)
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     ans_sensor.payload.command_res_cmd.status = 0xff;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_UINT8(ans_mote.payload.command_res_cmd.status, ans_sensor.payload.command_res_cmd.status);
 }
@@ -263,22 +253,22 @@ static void test_SENS_ITF_REGMAP_READ_BAT_STATUS(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
 
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     ans_sensor.payload.bat_status_cmd.status = 0xff;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_UINT8(ans_mote.payload.bat_status_cmd.status, ans_sensor.payload.bat_status_cmd.status);
 }
@@ -293,22 +283,22 @@ static void test_SENS_ITF_REGMAP_WRITE_BAT_STATUS(void)
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
     cmd_mote.payload.bat_status_cmd.status = 0x22;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     TEST_ASSERT_EQUAL_UINT8(cmd_mote.payload.bat_status_cmd.status, cmd_sensor.payload.bat_status_cmd.status);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
 }
 static void test_SENS_ITF_REGMAP_READ_BAT_CHARGE(void)
@@ -319,22 +309,22 @@ static void test_SENS_ITF_REGMAP_READ_BAT_CHARGE(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     ans_sensor.payload.bat_charge_cmd.charge = 50;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_UINT8(ans_mote.payload.bat_charge_cmd.charge, ans_sensor.payload.bat_charge_cmd.charge);
 }
@@ -348,22 +338,22 @@ static void test_SENS_ITF_REGMAP_WRITE_BAT_CHARGE(void)
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
     cmd_mote.payload.bat_charge_cmd.charge = 50;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     TEST_ASSERT_EQUAL_UINT8(cmd_mote.payload.bat_charge_cmd.charge, cmd_sensor.payload.bat_charge_cmd.charge);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
 }
 
@@ -376,22 +366,22 @@ static void test_SENS_ITF_REGMAP_WPAN_STATUS(void)
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
     cmd_mote.payload.wpan_status_cmd.status = 50;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     TEST_ASSERT_EQUAL_UINT8(cmd_mote.payload.wpan_status_cmd.status, cmd_sensor.payload.wpan_status_cmd.status);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
 }
 
@@ -404,22 +394,22 @@ static void test_SENS_ITF_REGMAP_WPAN_STRENGTH(void)
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
     cmd_mote.payload.wpan_strength_cmd.strenght = 50;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     TEST_ASSERT_EQUAL_UINT8(cmd_mote.payload.wpan_strength_cmd.strenght, cmd_sensor.payload.wpan_strength_cmd.strenght);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
 }
 
@@ -433,11 +423,11 @@ static void test_SENS_ITF_REGMAP_DSP_WRITE(void)
     cmd_mote.hdr.addr = cmd_number;
     cmd_mote.payload.write_display_cmd.line = 1;
     strcpy(cmd_mote.payload.write_display_cmd.msg, "WPAN FOUND !");
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     TEST_ASSERT_EQUAL_INT8_ARRAY(cmd_mote.payload.write_display_cmd.msg, cmd_mote.payload.write_display_cmd.msg,SENS_ITF_DSP_MSG_MAX_SIZE);
     TEST_ASSERT_EQUAL_UINT8(cmd_mote.payload.write_display_cmd.line, cmd_mote.payload.write_display_cmd.line);
@@ -445,11 +435,11 @@ static void test_SENS_ITF_REGMAP_DSP_WRITE(void)
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
 }
 
@@ -461,22 +451,22 @@ static void test_SENS_ITF_REGMAP_SVR_MAIN_ADDR(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
 
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     memcpy(ans_sensor.payload.svr_addr_cmd.addr, "1234567812345678", 16);
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_INT8_ARRAY(ans_sensor.payload.svr_addr_cmd.addr,ans_mote.payload.svr_addr_cmd.addr,16);
 }
@@ -489,22 +479,22 @@ static void test_SENS_ITF_REGMAP_SVR_SEC_ADDR(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
 
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
     memcpy(ans_sensor.payload.svr_addr_cmd.addr, "1234567812345678", 16);
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_INT8_ARRAY(ans_sensor.payload.svr_addr_cmd.addr,ans_mote.payload.svr_addr_cmd.addr,16);}
 
@@ -516,11 +506,11 @@ static void test_SENS_ITF_REGMAP_POINT_DESC_1(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     
     // encode command res
@@ -531,11 +521,11 @@ static void test_SENS_ITF_REGMAP_POINT_DESC_1(void)
     ans_sensor.payload.point_desc_cmd.unit = 0; // TBD
     ans_sensor.payload.point_desc_cmd.access_rights = SENS_ITF_ACCESS_READ_ONLY;
     ans_sensor.payload.point_desc_cmd.sampling_time_x250ms = 4 * 10;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_INT8_ARRAY(ans_sensor.payload.point_desc_cmd.name, ans_mote.payload.point_desc_cmd.name,SENS_ITF_POINT_NAME_SIZE);
     TEST_ASSERT_EQUAL_UINT8(ans_sensor.payload.point_desc_cmd.type,ans_mote.payload.point_desc_cmd.type);
@@ -552,11 +542,11 @@ static void test_SENS_ITF_REGMAP_POINT_DESC_2(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     
     // encode command res
@@ -567,11 +557,11 @@ static void test_SENS_ITF_REGMAP_POINT_DESC_2(void)
     ans_sensor.payload.point_desc_cmd.unit = 10; // TBD
     ans_sensor.payload.point_desc_cmd.access_rights = SENS_ITF_ACCESS_READ_WRITE;
     ans_sensor.payload.point_desc_cmd.sampling_time_x250ms = 4 * 100;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
     TEST_ASSERT_EQUAL_INT8_ARRAY(ans_sensor.payload.point_desc_cmd.name, ans_mote.payload.point_desc_cmd.name,SENS_ITF_POINT_NAME_SIZE);
     TEST_ASSERT_EQUAL_UINT8(ans_sensor.payload.point_desc_cmd.type,ans_mote.payload.point_desc_cmd.type);
@@ -582,60 +572,89 @@ static void test_SENS_ITF_REGMAP_POINT_DESC_2(void)
 
 void test_SENS_ITF_REGMAP_READ_POINT_DATA_1(void)
 {
-    sens_itf_cmd_point_t *value;
     cmd_req_size = 4;
-    cmd_res_size = 9;
+    cmd_res_size = 10;
     cmd_number = SENS_ITF_REGMAP_READ_POINT_DATA_1;
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     
     // encode command res
-    value = sens_itf_get_point_value(0);
-    value->value.fp32 = 3.141592f;
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    ans_sensor.payload.point_value_cmd.type = SENS_ITF_DT_FLOAT;
+    ans_sensor.payload.point_value_cmd.value.fp32 = 3.141592f;
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
-    validate_point_value(SENS_ITF_REGMAP_READ_POINT_DATA_1, &ans_mote.payload.point_value_cmd);
+    validate_point_value(&ans_sensor.payload.point_value_cmd, &ans_mote.payload.point_value_cmd);
 }
 
 void test_SENS_ITF_REGMAP_WRITE_POINT_DATA_5(void)
 {
-    cmd_req_size = 8;
+    cmd_req_size = 9;
     cmd_res_size = 5;
     cmd_number = SENS_ITF_REGMAP_WRITE_POINT_DATA_5;
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
+    cmd_mote.payload.point_value_cmd.type = SENS_ITF_DT_U32;
     cmd_mote.payload.point_value_cmd.value.u32 = 0x12345678;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
-    validate_point_value(SENS_ITF_REGMAP_WRITE_POINT_DATA_5, &cmd_sensor.payload.point_value_cmd);
+    validate_point_value(&cmd_mote.payload.point_value_cmd, &cmd_sensor.payload.point_value_cmd);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
+}
+
+void test_SENS_ITF_REGMAP_READ_POINT_DATA_32(void)
+{
+    cmd_req_size = 4;
+    cmd_res_size = 8;
+    cmd_number = SENS_ITF_REGMAP_READ_POINT_DATA_32;
+
+    // enconde command req
+    cmd_mote.hdr.addr = cmd_number;
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
+    TEST_ASSERT_EQUAL_UINT8(cmd_req_size, size_mote);
+
+    // decode command req
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
+    test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
+    
+    // encode command res
+    ans_sensor.hdr.addr = cmd_number;
+    ans_sensor.hdr.status = SENS_ITF_ANS_OK;
+    ans_sensor.payload.point_value_cmd.type = SENS_ITF_DT_S16;
+    ans_sensor.payload.point_value_cmd.value.s16 = -512;
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
+    TEST_ASSERT_EQUAL_UINT8(cmd_res_size, size_sensor);
+
+    // decode command res
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
+    test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
+    validate_point_value(&ans_sensor.payload.point_value_cmd, &ans_mote.payload.point_value_cmd);
 }
 
 void test_main(void)
@@ -657,9 +676,9 @@ void test_main(void)
     RUN_TEST(test_SENS_ITF_REGMAP_SVR_SEC_ADDR,__LINE__);
     RUN_TEST(test_SENS_ITF_REGMAP_POINT_DESC_1,__LINE__);
     RUN_TEST(test_SENS_ITF_REGMAP_POINT_DESC_2,__LINE__);
-    // CAN NOT BE USED UNTIL SENSOR DB IS READY AND MIRRORING SENSOR DB
-    // RUN_TEST(test_SENS_ITF_REGMAP_READ_POINT_DATA_1,__LINE__);
-    // RUN_TEST(test_SENS_ITF_REGMAP_WRITE_POINT_DATA_5,__LINE__);
+    RUN_TEST(test_SENS_ITF_REGMAP_READ_POINT_DATA_1,__LINE__);
+    RUN_TEST(test_SENS_ITF_REGMAP_WRITE_POINT_DATA_5,__LINE__);
+    RUN_TEST(test_SENS_ITF_REGMAP_READ_POINT_DATA_32,__LINE__);
     
     UnityEnd();
 }
@@ -689,21 +708,21 @@ int main(void)
 
     // enconde command req
     cmd_mote.hdr.addr = cmd_number;
-    size_mote = sens_itf_mote_pack_command_req(&cmd_mote, frame);
+    size_mote = sens_itf_pack_cmd_req(&cmd_mote, frame);
     TEST_ASSERT_EQUAL_INT(cmd_req_size, size_mote);
 
     // decode command req
-    size_sensor = sens_itf_sensor_unpack_command_req(&cmd_sensor, frame, size_mote);
+    size_sensor = sens_itf_unpack_cmd_req(&cmd_sensor, frame, size_mote);
     test_decode_req(cmd_req_size, size_sensor,&cmd_mote, &cmd_sensor);
     
     // encode command res
     ans_sensor.hdr.addr = cmd_number;
     ans_sensor.hdr.status = SENS_ITF_ANS_OK;
-    size_sensor = sens_itf_sensor_pack_command_res(&ans_sensor, frame);
+    size_sensor = sens_itf_pack_cmd_res(&ans_sensor, frame);
     TEST_ASSERT_EQUAL_INT(cmd_res_size, size_sensor);
 
     // decode command res
-    size_mote = sens_itf_mote_unpack_command_res(&ans_mote, frame, size_sensor);
+    size_mote = sens_itf_unpack_cmd_res(&ans_mote, frame, size_sensor);
     test_decode_ans(cmd_res_size, size_mote,&ans_sensor,&ans_mote);
 
 */

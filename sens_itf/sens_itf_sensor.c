@@ -73,161 +73,6 @@ sens_itf_cmd_brd_id_t *sens_itf_get_board_info(void)
     return &board_info;
 }
 
-uint8_t sens_itf_sensor_unpack_command_req(sens_itf_cmd_req_t *cmd, uint8_t *frame, uint8_t frame_size)
-{
-    uint8_t *buf = frame;
-    uint16_t crc;
-    uint16_t frame_crc;
-    uint8_t size;
-
-    if (frame_size < 3)
-    {
-        sens_util_log(SENS_ITF_DBG_FRAME, "Invalid frame size %d", frame_size);
-        return 0;
-    }
-    
-    // minimal header decoding
-    cmd->hdr.size = buf_io_get8_fl_ap(buf);
-    cmd->hdr.addr = buf_io_get8_fl_ap(buf);
-
-    frame_crc = buf_io_get16_fl(&frame[cmd->hdr.size]);
-    crc = crc16_calc(frame, cmd->hdr.size);
-    cmd->crc = frame_crc;
-
-    if (frame_crc != crc)
-    {
-        sens_util_log(SENS_ITF_DBG_FRAME, "Invalid CRC %04X <> %04X", frame_crc, crc);
-        return 0;
-    }
-    
-    switch (cmd->hdr.addr)
-    {
-    case SENS_ITF_REGMAP_BRD_CMD:
-        cmd->payload.command_cmd.cmd = buf_io_get8_fl_ap(buf);
-        break;
-    case SENS_ITF_REGMAP_WRITE_BAT_STATUS:
-        cmd->payload.bat_status_cmd.status = buf_io_get8_fl_ap(buf);
-        break;
-    case SENS_ITF_REGMAP_WRITE_BAT_CHARGE:
-        cmd->payload.bat_charge_cmd.charge = buf_io_get8_fl_ap(buf);
-        break;
-    case SENS_ITF_REGMAP_DSP_WRITE:
-        cmd->payload.write_display_cmd.line = buf_io_get8_fl_ap(buf);
-        memcpy(cmd->payload.write_display_cmd.msg,buf,SENS_ITF_DSP_MSG_MAX_SIZE);
-        buf += SENS_ITF_DSP_MSG_MAX_SIZE;
-        break;
-    case SENS_ITF_REGMAP_WPAN_STATUS:
-        cmd->payload.wpan_status_cmd.status = buf_io_get8_fl_ap(buf);
-        break;
-    case SENS_ITF_REGMAP_WPAN_STRENGTH:
-        cmd->payload.wpan_strength_cmd.strenght = buf_io_get8_fl_ap(buf);
-        break;
-    default:
-        break;
-    }
-
-    if ((cmd->hdr.addr >= SENS_ITF_REGMAP_WRITE_POINT_DATA_1) && 
-        (cmd->hdr.addr <= SENS_ITF_REGMAP_WRITE_POINT_DATA_32))
-    {
-        uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_WRITE_POINT_DATA_1;
-        if (point < SENS_ITF_SENSOR_NUM_OF_POINTS)
-        {
-            // update db
-            buf += sens_itf_unpack_point_value(sens_itf_get_point_value(point), buf);
-            // update cmd
-            cmd->payload.point_value_cmd = *sens_itf_get_point_value(point);
-        }
-    }
-
-    size = cmd->hdr.size + 2; // + crc 
-    return size;
-}
-
-uint8_t sens_itf_sensor_pack_command_res(sens_itf_cmd_res_t *cmd, uint8_t *frame)
-{
-    uint8_t *buf = &frame[1];
-    uint8_t size = 0;
-    uint16_t crc;
-
-    buf_io_put8_tl_ap(cmd->hdr.addr, buf);
-    buf_io_put8_tl_ap(cmd->hdr.status, buf);
-
-    // only fill command when status is OK, otherwise an error will be reported
-    if (cmd->hdr.status == SENS_ITF_ANS_OK)
-    {
-        switch (cmd->hdr.addr)
-        {
-        case SENS_ITF_REGMAP_ITF_VERSION:
-            buf_io_put8_tl_ap(cmd->payload.itf_version_cmd.version, buf);
-            break;
-        case SENS_ITF_REGMAP_BRD_ID:
-            memcpy(buf, cmd->payload.brd_id_cmd.model, SENS_ITF_MODEL_NAME_SIZE);
-            buf += SENS_ITF_MODEL_NAME_SIZE;
-            memcpy(buf, cmd->payload.brd_id_cmd.manufactor, SENS_ITF_MANUF_NAME_SIZE);
-            buf += SENS_ITF_MODEL_NAME_SIZE;
-            buf_io_put32_tl_ap(cmd->payload.brd_id_cmd.sensor_id, buf);
-            buf_io_put8_tl_ap(cmd->payload.brd_id_cmd.hardware_revision, buf);
-            buf_io_put8_tl_ap(cmd->payload.brd_id_cmd.num_of_points, buf);
-            buf_io_put8_tl_ap(cmd->payload.brd_id_cmd.cabalities, buf);
-            break;
-        case SENS_ITF_REGMAP_BRD_STATUS:
-            buf_io_put8_tl_ap(cmd->payload.brd_status_cmd.status, buf);
-            break;
-        case SENS_ITF_REGMAP_BRD_CMD:
-            buf_io_put8_tl_ap(cmd->payload.command_res_cmd.status, buf);
-            break;
-        case SENS_ITF_REGMAP_READ_BAT_STATUS:
-            buf_io_put8_tl_ap(cmd->payload.bat_status_cmd.status, buf);
-            break;
-        case SENS_ITF_REGMAP_READ_BAT_CHARGE:
-            buf_io_put8_tl_ap(cmd->payload.bat_charge_cmd.charge, buf);
-            break;
-        case SENS_ITF_REGMAP_SVR_MAIN_ADDR:
-        case SENS_ITF_REGMAP_SVR_SEC_ADDR:
-            memcpy(buf, cmd->payload.svr_addr_cmd.addr, SENS_ITF_SERVER_ADDR_SIZE);
-            buf += SENS_ITF_SERVER_ADDR_SIZE;
-            break;
-        }
-
-        if ((cmd->hdr.addr >= SENS_ITF_REGMAP_POINT_DESC_1) &&
-            (cmd->hdr.addr <= SENS_ITF_REGMAP_POINT_DESC_32))
-        {
-            uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_POINT_DESC_1;
-            if (point < SENS_ITF_SENSOR_NUM_OF_POINTS)
-            {
-                memcpy(buf, cmd->payload.point_desc_cmd.name, SENS_ITF_POINT_NAME_SIZE);
-                buf += SENS_ITF_POINT_NAME_SIZE;
-                buf_io_put8_tl_ap(cmd->payload.point_desc_cmd.type, buf);
-                buf_io_put8_tl_ap(cmd->payload.point_desc_cmd.unit, buf);
-                buf_io_put8_tl_ap(cmd->payload.point_desc_cmd.access_rights, buf);
-                buf_io_put32_tl_ap(cmd->payload.point_desc_cmd.sampling_time_x250ms, buf);
-            }
-        }
-
-        if ((cmd->hdr.addr >= SENS_ITF_REGMAP_READ_POINT_DATA_1) &&
-            (cmd->hdr.addr <= SENS_ITF_REGMAP_READ_POINT_DATA_32))
-        {
-            uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_READ_POINT_DATA_1;
-            if (point < SENS_ITF_SENSOR_NUM_OF_POINTS)
-            {
-                buf += sens_itf_pack_point_value(sens_itf_get_point_value(point), buf);
-                // update cmd
-                cmd->payload.point_value_cmd = *sens_itf_get_point_value(point);
-            }
-        }
-    }
-
-    size = buf - frame;
-    buf_io_put8_tl(size, frame);
-    crc = crc16_calc(frame, size);
-    cmd->crc = crc;
-    cmd->hdr.size = size;
-    buf_io_put16_tl(crc, buf);
-    
-    size += 2; // +crc 
-    return size;
-}
-
 static uint8_t sens_itf_sensor_send_frame(uint8_t *frame, uint8_t size)
 {
     sens_util_dump_frame(frame, size);
@@ -252,7 +97,7 @@ static uint8_t sens_itf_sensor_check_register_map(sens_itf_cmd_req_t *cmd, sens_
     {
         sens_util_log(SENS_ITF_SENSOR_DBG_FRAME, "Invalid register address %02X",cmd->hdr.addr);
         ans->hdr.status = SENS_ITF_ANS_REGISTER_NOT_IMPLEMENTED;
-        size = sens_itf_sensor_pack_command_res(ans, frame);
+        size = sens_itf_pack_cmd_res(ans, frame);
     }
     return size;
 }
@@ -276,7 +121,7 @@ static uint8_t sens_itf_sensor_writings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
             ans->hdr.status = SENS_ITF_ANS_OK;
             sens_itf_set_point_value(point,&cmd->payload.point_value_cmd);
         }
-        size = sens_itf_sensor_pack_command_res(ans, frame);
+        size = sens_itf_pack_cmd_res(ans, frame);
     }
     return size;
 }
@@ -301,7 +146,7 @@ static uint8_t sens_itf_sensor_readings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
             sens_itf_cmd_point_t *pv = sens_itf_get_point_value(point);
             ans->payload.point_value_cmd = *pv;
         }
-        size = sens_itf_sensor_pack_command_res(ans, frame);
+        size = sens_itf_pack_cmd_res(ans, frame);
     }
     return size;
 }
@@ -337,7 +182,7 @@ static uint8_t sens_itf_check_other_cmds(sens_itf_cmd_req_t *cmd, sens_itf_cmd_r
             break;
 
     }
-    size = sens_itf_sensor_pack_command_res(ans, frame);
+    size = sens_itf_pack_cmd_res(ans, frame);
     return size;
 }
 static void sens_itf_process_cmd(void)
@@ -347,7 +192,7 @@ static void sens_itf_process_cmd(void)
     sens_itf_cmd_req_t cmd;
     sens_itf_cmd_res_t ans;
 
-    ret = sens_itf_sensor_unpack_command_req(&cmd, frame, num_rx_bytes);
+    ret = sens_itf_unpack_cmd_req(&cmd, frame, num_rx_bytes);
 
     if (ret > 0)
     {
@@ -362,7 +207,7 @@ static void sens_itf_process_cmd(void)
         if (!size)
         {
             ans.hdr.status = SENS_ITF_ANS_ERROR;
-            size = sens_itf_sensor_pack_command_res(&ans,frame);
+            size = sens_itf_pack_cmd_res(&ans,frame);
         }
         
         sens_itf_sensor_send_frame(frame, size);
@@ -462,9 +307,11 @@ void sens_itf_init_point_db(void)
 
 uint8_t sens_itf_sensor_init(void)
 {
+
+    sens_itf_init_point_db();
+
     num_rx_bytes = 0;
     process_frame = 0;
-    sens_itf_init_point_db();
     rx_trmout_timer = os_timer_create((os_timer_func) sens_itf_rx_tmrout_timer_func, 0, 200, 0, 0);
 
     return 1;

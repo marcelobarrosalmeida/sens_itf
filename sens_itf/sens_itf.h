@@ -390,11 +390,10 @@ extern uint8_t sens_itf_sensor_init(void);
 extern uint8_t sens_itf_unpack_point_value(sens_itf_cmd_point_t *point, uint8_t *buf);
 extern uint8_t sens_itf_pack_point_value(const sens_itf_cmd_point_t *point, uint8_t *buf);
 
-extern uint8_t sens_itf_mote_unpack_command_res(sens_itf_cmd_res_t * cmd, uint8_t *frame, uint8_t frame_size);
-extern uint8_t sens_itf_mote_pack_command_req(sens_itf_cmd_req_t *cmd, uint8_t *frame);
-
-extern uint8_t sens_itf_sensor_unpack_command_req(sens_itf_cmd_req_t *cmd, uint8_t *frame, uint8_t frame_size);
-extern uint8_t sens_itf_sensor_pack_command_res(sens_itf_cmd_res_t *cmd, uint8_t *frame);
+extern uint8_t sens_itf_unpack_cmd_res(sens_itf_cmd_res_t *cmd, uint8_t *frame, uint8_t frame_size);
+extern uint8_t sens_itf_unpack_cmd_req(sens_itf_cmd_req_t *cmd, uint8_t *frame, uint8_t frame_size);
+extern uint8_t sens_itf_pack_cmd_res  (sens_itf_cmd_res_t *cmd, uint8_t *frame);
+extern uint8_t sens_itf_pack_cmd_req  (sens_itf_cmd_req_t *cmd, uint8_t *frame);
 
 extern uint8_t sens_itf_get_point_type(uint8_t point);
 extern uint8_t sens_itf_get_number_of_points(void);
