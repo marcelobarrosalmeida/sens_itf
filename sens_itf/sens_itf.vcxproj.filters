@@ -16,6 +16,9 @@
     <Filter Include="util">
       <UniqueIdentifier>{b674d87c-4dab-4639-8cbe-fec60fc2c94a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pt">
+      <UniqueIdentifier>{8cab762b-a140-4534-b5f9-23a441c0deb4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\owsn\board_info.h">
@@ -63,6 +66,24 @@
     <ClInclude Include="..\os\os_kernel.h">
       <Filter>os</Filter>
     </ClInclude>
+    <ClInclude Include="..\pt\graham-pt.h">
+      <Filter>pt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pt\lc.h">
+      <Filter>pt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pt\lc-addrlabels.h">
+      <Filter>pt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pt\lc-switch.h">
+      <Filter>pt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pt\pt.h">
+      <Filter>pt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pt\pt-sem.h">
+      <Filter>pt</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\owsn\board.c">
@@ -106,6 +127,9 @@
     </ClCompile>
     <ClCompile Include="..\os\os_kernel.c">
       <Filter>os</Filter>
+    </ClCompile>
+    <ClCompile Include="main.c">
+      <Filter>sens_itf</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
