@@ -18,16 +18,15 @@
 static uint8_t main_svr_addr[SENS_ITF_SERVER_ADDR_SIZE];
 static uint8_t secon_svr_addr[SENS_ITF_SERVER_ADDR_SIZE];
 static uint8_t rx_frame[SENS_ITF_MAX_FRAME_SIZE];
-static uint8_t frame[SENS_ITF_MAX_FRAME_SIZE];
 static volatile uint8_t num_rx_bytes;
-static volatile uint8_t num_bytes;
-static os_timer_t rx_trmout_timer = 0;
+static os_timer_t rx_trmout_timer ;
+static os_timer_t acq_data_timer;
 static sens_itf_point_ctrl_t sensor_points;
 static sens_itf_cmd_brd_id_t board_info;
-static struct pt pt_proc;
+static struct pt pt_acq;
 static struct pt pt_data;
-static volatile uint8_t frame_timeout = 0;
-static volatile uint8_t process_frame = 0;
+static volatile uint8_t frame_timeout;
+static volatile uint8_t acq_data ;
 
 static uint8_t sens_itf_get_point_type(uint8_t point)
 {
@@ -192,14 +191,14 @@ static uint8_t sens_itf_check_other_cmds(sens_itf_cmd_req_t *cmd, sens_itf_cmd_r
     size = sens_itf_pack_cmd_res(ans, frame);
     return size;
 }
-static void sens_itf_process_cmd(void)
+static void sens_itf_process_cmd(uint8_t *frame, uint8_t num_rx_bytes)
 {
     uint8_t ret;
     uint8_t size = 0;
     sens_itf_cmd_req_t cmd;
     sens_itf_cmd_res_t ans;
 
-    ret = sens_itf_unpack_cmd_req(&cmd, frame, num_bytes);
+    ret = sens_itf_unpack_cmd_req(&cmd, frame, num_rx_bytes);
 
     if (ret > 0)
     {
@@ -272,6 +271,11 @@ static void sens_itf_rx_tmrout_timer_func(void)
     frame_timeout = 1;
 }
 
+static void sens_itf_acq_data_timer_func(void)
+{
+    acq_data = 1;
+}
+
 uint8_t sens_itf_sensor_init(void)
 {
 
@@ -279,9 +283,10 @@ uint8_t sens_itf_sensor_init(void)
     memcpy(main_svr_addr,"1212121212121212",SENS_ITF_SERVER_ADDR_SIZE);
     memcpy(secon_svr_addr,"aabbccddeeff1122",SENS_ITF_SERVER_ADDR_SIZE);
     num_rx_bytes = 0;
-    process_frame = 0;
+    acq_data = 0;
     frame_timeout = 0;
     rx_trmout_timer = os_timer_create((os_timer_func) sens_itf_rx_tmrout_timer_func, 0, 50, 0, 1);
+    acq_data_timer = os_timer_create((os_timer_func) sens_itf_acq_data_timer_func, 0, 1000, 0, 1);
 
     return 1;
 }
@@ -315,16 +320,8 @@ static int pt_data_func(struct pt *pt)
 
         if (num_rx_bytes > 0)
         {
-            // wait last operation
-            PT_WAIT_UNTIL(pt, process_frame == 0);
-
-            // create the new job
-            memcpy(frame, rx_frame, num_rx_bytes);
-            num_bytes = num_rx_bytes;
-
-            // dispatch job
-            process_frame = 1;
-
+            // process it
+            sens_itf_process_cmd(rx_frame, num_rx_bytes);
             num_rx_bytes = 0;
         }
 
@@ -336,20 +333,17 @@ static int pt_data_func(struct pt *pt)
     PT_END(pt);
 }
 
-static int pt_proc_func(struct pt *pt)
+static int pt_acq_func(struct pt *pt)
 {
     PT_BEGIN(pt);
 
     while (1)
     {
         // wait job
-        PT_WAIT_UNTIL(pt, process_frame == 1);
-
-        // process it
-        sens_itf_process_cmd();
-
-        // done
-        process_frame = 0;
+        PT_WAIT_UNTIL(pt, acq_data == 1);
+        // read data from sensor and update points
+        // {}
+        acq_data = 0;
     }
 
     PT_END(pt);
@@ -361,15 +355,15 @@ void sens_itf_sensor_main(void)
     sens_itf_sensor_init();
 
     PT_INIT(&pt_data);
-    PT_INIT(&pt_proc);
+    PT_INIT(&pt_acq);
 
     frame_timeout = 0;
-    process_frame = 0;
+    acq_data = 0;
 
     while(1)
     {
         pt_data_func(&pt_data);
-        pt_proc_func(&pt_proc);
+        pt_acq_func(&pt_acq);
     }    
 
     //while (1)
