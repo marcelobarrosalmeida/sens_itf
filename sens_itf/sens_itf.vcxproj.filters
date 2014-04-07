@@ -48,9 +48,6 @@
     <ClInclude Include="sens_itf.h">
       <Filter>sens_itf</Filter>
     </ClInclude>
-    <ClInclude Include="sens_util.h">
-      <Filter>sens_itf</Filter>
-    </ClInclude>
     <ClInclude Include="..\os\os_defs.h">
       <Filter>os</Filter>
     </ClInclude>
@@ -84,6 +81,12 @@
     <ClInclude Include="..\pt\pt-sem.h">
       <Filter>pt</Filter>
     </ClInclude>
+    <ClInclude Include="..\os\os_serial.h">
+      <Filter>os</Filter>
+    </ClInclude>
+    <ClInclude Include="..\os\os_util.h">
+      <Filter>os</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\owsn\board.c">
@@ -116,9 +119,6 @@
     <ClCompile Include="sens_itf_unity_test.c">
       <Filter>sens_itf</Filter>
     </ClCompile>
-    <ClCompile Include="sens_util.c">
-      <Filter>sens_itf</Filter>
-    </ClCompile>
     <ClCompile Include="..\os\os_timer.c">
       <Filter>os</Filter>
     </ClCompile>
@@ -130,6 +130,12 @@
     </ClCompile>
     <ClCompile Include="main.c">
       <Filter>sens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="..\os\os_serial.c">
+      <Filter>os</Filter>
+    </ClCompile>
+    <ClCompile Include="..\os\os_util.c">
+      <Filter>os</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

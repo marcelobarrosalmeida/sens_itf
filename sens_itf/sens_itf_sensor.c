@@ -4,7 +4,7 @@
 #include "../os/os_defs.h"
 #include "../os/os_timer.h"
 #include "../os/os_kernel.h"
-#include "sens_util.h"
+#include "../os/os_util.h"
 #include "../util/buf_io.h"
 #include "../util/crc16.h"
 #include "../pt/pt.h"
@@ -82,7 +82,7 @@ static sens_itf_cmd_brd_id_t *sens_itf_get_board_info(void)
 
 static uint8_t sens_itf_sensor_send_frame(uint8_t *frame, uint8_t size)
 {
-    sens_util_dump_frame(frame, size);
+    os_util_dump_frame(frame, size);
     return size;
 }
 
@@ -102,7 +102,7 @@ static uint8_t sens_itf_sensor_check_register_map(sens_itf_cmd_req_t *cmd, sens_
                 (cmd->hdr.addr <= SENS_ITF_REGMAP_WRITE_POINT_DATA_32) &&
                 ((cmd->hdr.addr - SENS_ITF_REGMAP_WRITE_POINT_DATA_1) >= sens_itf_get_number_of_points())))
     {
-        sens_util_log(SENS_ITF_SENSOR_DBG_FRAME, "Invalid register address %02X",cmd->hdr.addr);
+        OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Invalid register address %02X",cmd->hdr.addr));
         ans->hdr.status = SENS_ITF_ANS_REGISTER_NOT_IMPLEMENTED;
         size = sens_itf_pack_cmd_res(ans, frame);
     }
@@ -120,7 +120,7 @@ static uint8_t sens_itf_sensor_writings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
             
         if (!acr)
         {
-            sens_util_log(SENS_ITF_SENSOR_DBG_FRAME, "Point %d does not allow writings",point);                
+            OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Point %d does not allow writings",point));  
             ans->hdr.status = SENS_ITF_ANS_READY_ONLY;
         }
         else
@@ -144,7 +144,7 @@ static uint8_t sens_itf_sensor_readings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
             
         if (!acr)
         {
-            sens_util_log(SENS_ITF_SENSOR_DBG_FRAME, "Point %d does not allow readings",point);                
+            OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Point %d does not allow readings",point));
             ans->hdr.status = SENS_ITF_ANS_WRITE_ONLY;
         }
         else
@@ -186,8 +186,17 @@ static uint8_t sens_itf_check_other_cmds(sens_itf_cmd_req_t *cmd, sens_itf_cmd_r
         case SENS_ITF_REGMAP_SVR_SEC_ADDR:
             memcpy(ans->payload.svr_addr_cmd.addr,secon_svr_addr, SENS_ITF_SERVER_ADDR_SIZE);
             break;
-
+        default:
+            break;
     }
+
+    if ((cmd->hdr.addr >= SENS_ITF_REGMAP_POINT_DESC_1) && (cmd->hdr.addr <= SENS_ITF_REGMAP_POINT_DESC_32))
+    {
+        uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_POINT_DESC_1;
+        memcpy(&ans->payload.point_desc_cmd, &sensor_points.points[point].desc, sizeof(sens_itf_cmd_point_desc_t));
+    }
+
+    ans->hdr.status = SENS_ITF_ANS_OK;
     size = sens_itf_pack_cmd_res(ans, frame);
     return size;
 }
@@ -209,13 +218,12 @@ static void sens_itf_process_cmd(uint8_t *frame, uint8_t num_rx_bytes)
         if (size == 0)
             size = sens_itf_sensor_readings(&cmd, &ans,frame);
         if (size == 0)
-            size = size = sens_itf_check_other_cmds(&cmd, &ans,frame);
+            size = sens_itf_check_other_cmds(&cmd, &ans,frame);
         if (size == 0)
         {
             ans.hdr.status = SENS_ITF_ANS_ERROR;
-            size = sens_itf_pack_cmd_res(&ans,frame);
         }
-        
+        size = sens_itf_pack_cmd_res(&ans,frame);
         sens_itf_sensor_send_frame(frame, size);
     }
 }

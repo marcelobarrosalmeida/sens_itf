@@ -79,7 +79,9 @@
   <ItemGroup>
     <ClInclude Include="..\os\os_defs.h" />
     <ClInclude Include="..\os\os_kernel.h" />
+    <ClInclude Include="..\os\os_serial.h" />
     <ClInclude Include="..\os\os_timer.h" />
+    <ClInclude Include="..\os\os_util.h" />
     <ClInclude Include="..\owsn\board.h" />
     <ClInclude Include="..\owsn\board_info.h" />
     <ClInclude Include="..\owsn\debugpins.h" />
@@ -97,11 +99,12 @@
     <ClInclude Include="..\util\buf_io.h" />
     <ClInclude Include="..\util\crc16.h" />
     <ClInclude Include="sens_itf.h" />
-    <ClInclude Include="sens_util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\os\os_kernel.c" />
+    <ClCompile Include="..\os\os_serial.c" />
     <ClCompile Include="..\os\os_timer.c" />
+    <ClCompile Include="..\os\os_util.c" />
     <ClCompile Include="..\owsn\board.c" />
     <ClCompile Include="..\owsn\debugpins.c" />
     <ClCompile Include="..\owsn\leds.c" />
@@ -114,7 +117,6 @@
     <ClCompile Include="sens_itf_mote.c" />
     <ClCompile Include="sens_itf_sensor.c" />
     <ClCompile Include="sens_itf_unity_test.c" />
-    <ClCompile Include="sens_util.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

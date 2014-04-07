@@ -3,7 +3,7 @@
 #include "sens_itf.h"
 #include "../os/os_defs.h"
 #include "../os/os_timer.h"
-#include "sens_util.h"
+#include "../os/os_util.h"
 #include "../util/buf_io.h"
 #include "../util/crc16.h"
 
@@ -124,7 +124,7 @@ uint8_t sens_itf_unpack_cmd_req(sens_itf_cmd_req_t *cmd, uint8_t *frame, uint8_t
 
     if (frame_size < 3)
     {
-        sens_util_log(SENS_ITF_DBG_FRAME, "Invalid frame size %d", frame_size);
+        OS_UTIL_LOG(SENS_ITF_DBG_FRAME, ("Invalid frame size %d", frame_size));
         return 0;
     }
     
@@ -138,7 +138,7 @@ uint8_t sens_itf_unpack_cmd_req(sens_itf_cmd_req_t *cmd, uint8_t *frame, uint8_t
 
     if (frame_crc != crc)
     {
-        sens_util_log(SENS_ITF_DBG_FRAME, "Invalid CRC %04X <> %04X", frame_crc, crc);
+        OS_UTIL_LOG(SENS_ITF_DBG_FRAME, ("Invalid CRC %04X <> %04X", frame_crc, crc));
         return 0;
     }
     
@@ -171,7 +171,7 @@ uint8_t sens_itf_unpack_cmd_req(sens_itf_cmd_req_t *cmd, uint8_t *frame, uint8_t
     if ((cmd->hdr.addr >= SENS_ITF_REGMAP_WRITE_POINT_DATA_1) && 
         (cmd->hdr.addr <= SENS_ITF_REGMAP_WRITE_POINT_DATA_32))
     {
-        uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_WRITE_POINT_DATA_1;
+        //uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_WRITE_POINT_DATA_1;
         cmd->payload.point_value_cmd.type =  buf_io_get8_fl_ap(buf);
         buf += sens_itf_unpack_point_value(&cmd->payload.point_value_cmd, buf);
     }
@@ -231,7 +231,7 @@ uint8_t sens_itf_pack_cmd_res(sens_itf_cmd_res_t *cmd, uint8_t *frame)
         if ((cmd->hdr.addr >= SENS_ITF_REGMAP_POINT_DESC_1) &&
             (cmd->hdr.addr <= SENS_ITF_REGMAP_POINT_DESC_32))
         {
-            uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_POINT_DESC_1;
+            //uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_POINT_DESC_1;
             memcpy(buf, cmd->payload.point_desc_cmd.name, SENS_ITF_POINT_NAME_SIZE);
             buf += SENS_ITF_POINT_NAME_SIZE;
             buf_io_put8_tl_ap(cmd->payload.point_desc_cmd.type, buf);
@@ -243,7 +243,7 @@ uint8_t sens_itf_pack_cmd_res(sens_itf_cmd_res_t *cmd, uint8_t *frame)
         if ((cmd->hdr.addr >= SENS_ITF_REGMAP_READ_POINT_DATA_1) &&
             (cmd->hdr.addr <= SENS_ITF_REGMAP_READ_POINT_DATA_32))
         {
-            uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_READ_POINT_DATA_1;
+            //uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_READ_POINT_DATA_1;
             buf_io_put8_tl_ap(cmd->payload.point_value_cmd.type,buf);
             buf += sens_itf_pack_point_value(&cmd->payload.point_value_cmd, buf);
         }
@@ -285,14 +285,14 @@ uint8_t sens_itf_unpack_cmd_res(sens_itf_cmd_res_t * cmd, uint8_t *frame, uint8_
 
     if (frame_crc != crc)
     {
-        sens_util_log(SENS_ITF_DBG_FRAME, "Invalid CRC %04X <> %04X", frame_crc, crc);
+        OS_UTIL_LOG(SENS_ITF_DBG_FRAME, ("Invalid CRC %04X <> %04X", frame_crc, crc));
         cmd->hdr.status = SENS_ITF_ANS_CRC_ERROR;
         return 0;
     }
 
     if (cmd->hdr.status != SENS_ITF_ANS_OK)
     {
-        sens_util_log(SENS_ITF_DBG_FRAME, "Response error %d", cmd->hdr.status);
+        OS_UTIL_LOG(SENS_ITF_DBG_FRAME, ("Response error %d", cmd->hdr.status));
         return 0;
     }
 
@@ -346,7 +346,6 @@ uint8_t sens_itf_unpack_cmd_res(sens_itf_cmd_res_t * cmd, uint8_t *frame, uint8_
     if ((cmd->hdr.addr >= SENS_ITF_REGMAP_READ_POINT_DATA_1) &&
         (cmd->hdr.addr <= SENS_ITF_REGMAP_READ_POINT_DATA_32))
     {
-        // check point type in point db
         cmd->payload.point_value_cmd.type = buf_io_get8_fl_ap(buf);
         buf += sens_itf_unpack_point_value(&cmd->payload.point_value_cmd, buf);
     }

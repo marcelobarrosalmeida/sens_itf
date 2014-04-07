@@ -3,7 +3,7 @@
 #include "sens_itf.h"
 #include "../os/os_defs.h"
 #include "../os/os_timer.h"
-#include "sens_util.h"
+#include "../os/os_util.h"
 #include "../util/buf_io.h"
 #include "../util/crc16.h"
 #include "../unity/unity.h"
@@ -685,13 +685,13 @@ void test_main(void)
 
 int main(void)
 {
-    sens_util_log_start();
+    os_util_log_start();
     sens_itf_sensor_init();
     sens_itf_mote_init();
 
     test_main();
 
-    sens_util_log_stop();
+    os_util_log_stop();
     
     return 0;
 }

@@ -1,9 +1,9 @@
 /**
-    @file sens_util.h
+    @file os_util.h
     @brief Utilities routines
 */
-#ifndef __SENS_UTIL__
-#define __SENS_UTIL__ 
+#ifndef __OS_UTIL__
+#define __OS_UTIL__ 
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,15 +20,14 @@ extern "C" {
     
     @param cond Assertion condition.
  */
-extern void sens_util_assert(int cond);
+extern void os_util_assert(int cond);
 
 /**
     Message log utility.
     
-    @param cond Logs only when the condition is true.
     @param line Variable parameters list like printf.
 */
-extern void sens_util_log(int cond, const uint8_t *line, ...);
+extern void os_util_log(const unsigned char *line, ...);
 
 /**
     Start log.
@@ -36,7 +35,7 @@ extern void sens_util_log(int cond, const uint8_t *line, ...);
     @retval 1 Log not started.
     @retval 0 Log started.
 */
-extern int sens_util_log_start(void);
+extern int os_util_log_start(void);
 
 /**
 	Stop log .
@@ -44,7 +43,7 @@ extern int sens_util_log_start(void);
 @retval 1 Log not stopped.
 @retval 0 Log stopped.
 */
-extern int sens_util_log_stop(void);
+extern int os_util_log_stop(void);
 
 /**
     Remove path and return only the file name.
@@ -52,7 +51,7 @@ extern int sens_util_log_stop(void);
     @param filename file with full path name
     @return filename without path
 */
-extern const uint8_t *sens_util_strip_path(const uint8_t *filename);
+extern const uint8_t *os_util_strip_path(const unsigned char *filename);
 
 /**
     Print a buffer in hexadecimal (16 byte per row).
@@ -60,13 +59,19 @@ extern const uint8_t *sens_util_strip_path(const uint8_t *filename);
     @param data Data to be printed.
     @param len Data length.
 */
-extern void sens_util_dump_frame(const uint8_t *const data, int len);
+extern void os_util_dump_frame(const unsigned char *const data, int len);
 
 /**
-    @def SENS_UTIL_ASSERT
+    @def OS_UTIL_ASSERT
     @brief Assertion macro
 */
-#define SENS_UTIL_ASSERT(cond) sens_util_assert( !!(cond) )
+#define OS_UTIL_ASSERT(cond)   os_util_assert( !!(cond) )
+#define OS_UTIL_LOG(cond,expr)  \
+    do {\
+        if( (cond) ){ \
+            os_util_log expr; \
+        } \
+    } while(0)
 
 /**@}*/
 
@@ -74,5 +79,5 @@ extern void sens_util_dump_frame(const uint8_t *const data, int len);
 }
 #endif
 
-#endif /*  __SENS_UTIL__ */
+#endif /*  __OS_UTIL__ */
 

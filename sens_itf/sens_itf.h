@@ -386,6 +386,7 @@ typedef struct sens_itf_cmd_res_s
 
 extern uint8_t sens_itf_mote_init(void);
 extern uint8_t sens_itf_sensor_init(void);
+extern void sens_itf_mote_main(void);
 
 extern uint8_t sens_itf_unpack_point_value(sens_itf_cmd_point_t *point, uint8_t *buf);
 extern uint8_t sens_itf_pack_point_value(const sens_itf_cmd_point_t *point, uint8_t *buf);

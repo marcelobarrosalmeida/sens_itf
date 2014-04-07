@@ -4,19 +4,19 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "sens_util.h"
+#include "os_util.h"
 
 #define MAX_LOG_BUF 256
 static char buffer[MAX_LOG_BUF];
 
-static volatile int sens_util_log_started = 0;
+static volatile int os_util_log_started = 0;
 
-void sens_util_assert(int cond)
+void os_util_assert(int cond)
 {
     assert(cond);
 }
 
-const uint8_t *sens_util_strip_path(const uint8_t *filename)
+const uint8_t *os_util_strip_path(const unsigned char *filename)
 {
 	int pos;
 
@@ -31,11 +31,11 @@ const uint8_t *sens_util_strip_path(const uint8_t *filename)
 	return &filename[pos];
 }
 
-void sens_util_log(int cond, const uint8_t *line, ...)
+void os_util_log(const unsigned char *line, ...)
 {
 	va_list argp;
    
-    if((!cond) || (!sens_util_log_started))
+    if(!os_util_log_started)
 		return;
 
 	va_start(argp, line);
@@ -50,7 +50,7 @@ void sens_util_log(int cond, const uint8_t *line, ...)
     printf("%s",buffer);
 }
 
-void sens_util_dump_frame(const uint8_t * const data, int len)
+void os_util_dump_frame(const unsigned char * const data, int len)
 {
 	int i, j, k;
 	uint8_t buf[50];
@@ -60,22 +60,23 @@ void sens_util_dump_frame(const uint8_t * const data, int len)
 		for(i = k, j = 0 ; ( i< (k+16) ) && ( i < len ) ; i++, j+=3 )
 			sprintf((char *)&buf[j],"%02X ",data[i]);
 		buf[j] = '\0';
-		sens_util_log(1,"%s",buf);
+		os_util_log("%s",buf);
 	}
+    os_util_log("\n");
 }
 
-int sens_util_log_stop(void)
+int os_util_log_stop(void)
 {
-	if(sens_util_log_started)
-        sens_util_log_started  = 0;
+	if(os_util_log_started)
+        os_util_log_started  = 0;
 
 	return 0;
 }
 
-int sens_util_log_start(void)
+int os_util_log_start(void)
 {
-	if(!sens_util_log_started)
-        sens_util_log_started  = 1;
+	if(!os_util_log_started)
+        os_util_log_started  = 1;
 
 	return 0;
 }
