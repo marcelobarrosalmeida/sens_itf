@@ -53,7 +53,9 @@ static uint8_t sens_itf_mote_identify_sensor(void)
 static uint8_t sens_itf_mote_send_frame(uint8_t *frame, uint8_t size)
 {
     int16_t sent;
-    //os_util_dump_frame(frame, size);
+    #if SENS_ITF_OUTPUT == 1
+    os_util_dump_frame(frame, size);
+    #endif
     sent = os_serial_write(serial, frame, size);
     return (sent < 0 ? 0 : (uint8_t) sent); // CHECK AGAIN
 }
@@ -65,7 +67,9 @@ static uint8_t sens_itf_mote_recv_frame(uint8_t *frame, uint8_t size)
     recv = os_serial_read(serial, frame, size);
     if (recv > 0)
     {
-        //os_util_dump_frame(frame, recv);
+        #if SENS_ITF_OUTPUT == 1
+        os_util_dump_frame(frame, recv);
+        #endif
     }
     
     return (recv < 0 ? 0 : (uint8_t) recv); // CHECK AGAIN
@@ -214,6 +218,34 @@ static uint8_t sens_itf_mote_get_points_value(uint8_t point)
     return 1;
 }
 
+static uint8_t sens_itf_mote_set_points_value(uint8_t point)
+{
+	uint8_t size;
+    uint8_t cmd_size = 5 + datatype_sizes[sensor_points.points[point].desc.type];
+    uint8_t ans_size = 5;
+
+    cmd.hdr.addr = SENS_ITF_REGMAP_WRITE_POINT_DATA_1 + point;
+
+    size = sens_itf_pack_cmd_req(&cmd, frame);
+    if (size != cmd_size)
+        return 0;
+
+    if (sens_itf_mote_send_frame(frame, cmd_size) != cmd_size)
+        return 0;
+
+    os_kernel_sleep(1500);
+
+    size = sens_itf_mote_recv_frame(frame, ans_size);
+    if (size != ans_size)
+        return 0;
+
+    size = sens_itf_unpack_cmd_res(&ans, frame, ans_size);
+    if (size != ans_size)
+        return 0;
+
+    return 1;
+}
+
 static void sens_itf_mote_build_acquisition_schedule(void)
 {
 	uint8_t n, m;
@@ -237,14 +269,28 @@ static void sens_itf_mote_build_acquisition_schedule(void)
 
 static void sens_itf_mote_read_point(uint8_t index)
 {
+    /*
+    NEXT STEP: JUST ADD A NEW TASK TO SCHEDULER, DO NOT READ THE POINT
+    */
     uint8_t ret;
     OS_UTIL_LOG(1,("Reading point %d\n", index));
     ret = sens_itf_mote_get_points_value(index);
-    if (index == 0 && ret == 1)
+    if (ret)
     {
-        OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point 0 = %d\n",ans.payload.point_value_cmd.value.u8));
+        // update
+        memcpy(&sensor_points.points[index].value, &ans.payload.point_value_cmd, sizeof(sens_itf_cmd_point_t));
     }
     
+    // toggle led 
+    if (index == 0 && ret == 1)
+    {
+        uint8_t val = ans.payload.point_value_cmd.value.u8;
+        OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %d = %d\n",index,val));
+        sensor_points.points[1].value.value.u8 = (val > 80) ? 0 : 1;
+        OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point 1 = %d\n",sensor_points.points[1].value.value.u8));
+        memcpy(&cmd.payload.point_value_cmd, &sensor_points.points[1].value, sizeof(sens_itf_cmd_point_t));
+        sens_itf_mote_set_points_value(1);
+    }
 
 }
 
@@ -272,7 +318,6 @@ uint8_t sens_itf_mote_init(void)
 {
     uint8_t n;
     uint8_t ret = 0;
-    os_serial_options_t serial_options = { OS_SERIAL_BR_115200, OS_SERIAL_PR_NONE, OS_SERIAL_PB_1, 23};
 
 	memset(&cmd, 0, sizeof(cmd));
 	memset(&ans, 0, sizeof(ans));
@@ -281,7 +326,6 @@ uint8_t sens_itf_mote_init(void)
 	memset(&board_info, 0, sizeof(board_info));
 	memset(&acquisition_schedule, 0, sizeof(acquisition_schedule));
 
-    serial = os_serial_open(serial_options);
 
     if (sens_itf_mote_check_version(SENS_ITF_LATEST_VERSION))
     {
@@ -347,11 +391,86 @@ uint8_t sens_itf_mote_init(void)
 	return ret;
 }
 
+static void sens_itf_mote_show_values(void)
+{
+    uint8_t n;
+    OS_UTIL_LOG(SENS_ITF_OUTPUT, ("\n"));
+    for (n = 0; n < sensor_points.num_of_points; n++)
+    {
+        switch (sensor_points.points[n].value.type)
+        {
+        case SENS_ITF_DT_U8:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.u8));
+            break;
+        case SENS_ITF_DT_S8:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.s8));
+            break;
+        case SENS_ITF_DT_U16:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.u16));
+            break;
+        case SENS_ITF_DT_S16:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.s16));
+            break;
+        case SENS_ITF_DT_U32:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.u32));
+            break;
+        case SENS_ITF_DT_S32:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.s32));
+            break;
+        case SENS_ITF_DT_U64:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.u64));
+            break;
+        case SENS_ITF_DT_S64:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %d\n", n,sensor_points.points[n].value.value.s64));
+            break;
+        case SENS_ITF_DT_FLOAT:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %f\n", n,sensor_points.points[n].value.value.fp32));
+            break;
+        case SENS_ITF_DT_DOUBLE:
+            OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Point %02d: %f\n", n,sensor_points.points[n].value.value.fp64));
+            break;
+        default:
+            break;
+        }
+
+    }
+}
+
 void sens_itf_mote_main(void)
 {
-    sens_itf_mote_init();
+    os_serial_options_t serial_options = { OS_SERIAL_BR_115200, OS_SERIAL_PR_NONE, OS_SERIAL_PB_1, 23 };
+    uint32_t n = 3;
 
-    while (1){};
+    while (n > 0)
+    {
+        OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Trying to read profile (%d)...\n", n));
+
+        serial = os_serial_open(serial_options);
+
+        if (sens_itf_mote_init())
+            break;
+
+        os_serial_close(serial);
+
+        os_kernel_sleep(1);
+        n--;
+    }
+
+    if (n > 0)
+    {
+        OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Mote running ...\n"));
+        while (1)
+        {
+            sens_itf_mote_show_values();
+            os_kernel_sleep(5000);
+        }
+        
+    }
+    else
+    {
+        OS_UTIL_LOG(SENS_ITF_OUTPUT, ("Mote not running ...\n"));
+    }
+
     //sens_itf_sensor_main();
 	//sens_itf_mote_init();
     //board_init();

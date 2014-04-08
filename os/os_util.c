@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <time.h> 
 
 #include "os_util.h"
 
@@ -33,10 +34,18 @@ const uint8_t *os_util_strip_path(const unsigned char *filename)
 
 void os_util_log(const unsigned char *line, ...)
 {
-	va_list argp;
+    time_t cur_time;
+	struct tm * timeinfo;
+    
+    va_list argp;
    
     if(!os_util_log_started)
 		return;
+
+    time(&cur_time);
+    timeinfo = localtime (&cur_time);
+    strftime(buffer,80,"[%x %X] ",timeinfo);
+    printf("%s",buffer);
 
 	va_start(argp, line);
     vsnprintf(buffer,MAX_LOG_BUF,line, argp);
@@ -44,9 +53,6 @@ void os_util_log(const unsigned char *line, ...)
     
     buffer[MAX_LOG_BUF-1] = '\0';
 
-	// TODO
-	// define destination for this buffer: ethernet, serial, console, syslog ...
-	// 
     printf("%s",buffer);
 }
 

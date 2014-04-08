@@ -118,15 +118,15 @@ static uint8_t sens_itf_sensor_writings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
         uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_WRITE_POINT_DATA_1;
         uint8_t acr = sens_itf_get_point_desc(point)->access_rights & SENS_ITF_ACCESS_WRITE_ONLY;
             
-        if (!acr)
-        {
-            OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Point %d does not allow writings",point));  
-            ans->hdr.status = SENS_ITF_ANS_READY_ONLY;
-        }
-        else
+        if (acr)
         {
             ans->hdr.status = SENS_ITF_ANS_OK;
             sens_itf_set_point_value(point,&cmd->payload.point_value_cmd);
+        }
+        else
+        {
+            OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Point %d does not allow writings",point));  
+            ans->hdr.status = SENS_ITF_ANS_READY_ONLY;
         }
         size = sens_itf_pack_cmd_res(ans, frame);
     }
@@ -142,15 +142,15 @@ static uint8_t sens_itf_sensor_readings(sens_itf_cmd_req_t *cmd, sens_itf_cmd_re
         uint8_t point = cmd->hdr.addr - SENS_ITF_REGMAP_READ_POINT_DATA_1;
         uint8_t acr = sens_itf_get_point_desc(point)->access_rights & SENS_ITF_ANS_READY_ONLY;
             
-        if (!acr)
-        {
-            OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Point %d does not allow readings",point));
-            ans->hdr.status = SENS_ITF_ANS_WRITE_ONLY;
-        }
-        else
+        if (acr)
         {
             ans->hdr.status = SENS_ITF_ANS_OK;
             ans->payload.point_value_cmd = *sens_itf_get_point_value(point);
+        }
+        else
+        {
+            OS_UTIL_LOG(SENS_ITF_SENSOR_DBG_FRAME, ("Point %d does not allow readings",point));
+            ans->hdr.status = SENS_ITF_ANS_WRITE_ONLY;
         }
         size = sens_itf_pack_cmd_res(ans, frame);
     }

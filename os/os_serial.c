@@ -10,7 +10,7 @@
 #include "os_serial.h"
 
 
-#define OS_DBG_SER_DRV 0
+#define OS_DBG_SER_DRV 1
 
 #define MAX_PORT_NAME 10
 
