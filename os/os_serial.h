@@ -50,6 +50,7 @@ extern int os_serial_write(os_serial_t ser, unsigned char *data, int len);
 extern int os_serial_read_byte(os_serial_t ser, unsigned char *data);
 extern int os_serial_write_byte(os_serial_t ser, unsigned char data);
 extern int os_serial_close(os_serial_t ser);
+extern int os_serial_flush(os_serial_t ser);
 
 
 #ifdef __cplusplus

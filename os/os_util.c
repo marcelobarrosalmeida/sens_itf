@@ -66,9 +66,8 @@ void os_util_dump_frame(const unsigned char * const data, int len)
 		for(i = k, j = 0 ; ( i< (k+16) ) && ( i < len ) ; i++, j+=3 )
 			sprintf((char *)&buf[j],"%02X ",data[i]);
 		buf[j] = '\0';
-		os_util_log("%s",buf);
+		os_util_log("%s\n",buf);
 	}
-    os_util_log("\n");
 }
 
 int os_util_log_stop(void)

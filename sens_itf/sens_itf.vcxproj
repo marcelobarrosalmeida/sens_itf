@@ -14,6 +14,7 @@
     <ProjectGuid>{21B820B8-6F32-40B3-88C8-84E25C7FF21D}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>sens_itf</RootNamespace>
+    <ProjectName>osens_itf</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -98,7 +99,8 @@
     <ClInclude Include="..\unity\unity_internals.h" />
     <ClInclude Include="..\util\buf_io.h" />
     <ClInclude Include="..\util\crc16.h" />
-    <ClInclude Include="sens_itf.h" />
+    <ClInclude Include="osens.h" />
+    <ClInclude Include="osens_itf.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\os\os_kernel.c" />
@@ -113,9 +115,9 @@
     <ClCompile Include="..\util\buf_io.c" />
     <ClCompile Include="..\util\crc16.c" />
     <ClCompile Include="main.c" />
-    <ClCompile Include="sens_itf.c" />
-    <ClCompile Include="sens_itf_mote.c" />
-    <ClCompile Include="sens_itf_sensor.c" />
+    <ClCompile Include="osens_itf.c" />
+    <ClCompile Include="osens_itf_mote.c" />
+    <ClCompile Include="osens_itf_sensor.c" />
     <ClCompile Include="sens_itf_unity_test.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

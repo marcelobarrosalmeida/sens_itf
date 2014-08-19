@@ -10,7 +10,7 @@
 #include "os_serial.h"
 
 
-#define OS_DBG_SER_DRV 1
+#define OS_DBG_SER_DRV 0
 
 #define MAX_PORT_NAME 10
 
@@ -205,4 +205,13 @@ int os_serial_close(os_serial_t ser)
 	return 0;
 }
 
+int os_serial_flush(os_serial_t ser)
+{
+	OS_UTIL_ASSERT(ser);
+    OS_UTIL_ASSERT(ser->hcom != INVALID_HANDLE_VALUE);
 
+	OS_UTIL_LOG( OS_DBG_SER_DRV, ("Flushing port %d\n", ser->port) );
+
+    return (PurgeComm(ser->hcom,PURGE_RXCLEAR|PURGE_RXABORT|PURGE_TXABORT|PURGE_TXCLEAR) == 0 ? 0 : 1);
+}
+ 

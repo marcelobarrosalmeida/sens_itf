@@ -4,9 +4,6 @@
     <Filter Include="os">
       <UniqueIdentifier>{830896e4-a2b9-4321-972e-d0d1a9afc4b8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="sens_itf">
-      <UniqueIdentifier>{577b5d62-b8e6-4faf-b17f-2cd955b8dde8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="owsn">
       <UniqueIdentifier>{87eed68f-56c1-495b-a8d7-be30586671ba}</UniqueIdentifier>
     </Filter>
@@ -18,6 +15,9 @@
     </Filter>
     <Filter Include="pt">
       <UniqueIdentifier>{8cab762b-a140-4534-b5f9-23a441c0deb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="osens_itf">
+      <UniqueIdentifier>{577b5d62-b8e6-4faf-b17f-2cd955b8dde8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -44,9 +44,6 @@
     </ClInclude>
     <ClInclude Include="..\util\crc16.h">
       <Filter>util</Filter>
-    </ClInclude>
-    <ClInclude Include="sens_itf.h">
-      <Filter>sens_itf</Filter>
     </ClInclude>
     <ClInclude Include="..\os\os_defs.h">
       <Filter>os</Filter>
@@ -87,6 +84,12 @@
     <ClInclude Include="..\os\os_util.h">
       <Filter>os</Filter>
     </ClInclude>
+    <ClInclude Include="osens_itf.h">
+      <Filter>osens_itf</Filter>
+    </ClInclude>
+    <ClInclude Include="osens.h">
+      <Filter>osens_itf</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\owsn\board.c">
@@ -107,17 +110,8 @@
     <ClCompile Include="..\util\crc16.c">
       <Filter>util</Filter>
     </ClCompile>
-    <ClCompile Include="sens_itf.c">
-      <Filter>sens_itf</Filter>
-    </ClCompile>
-    <ClCompile Include="sens_itf_mote.c">
-      <Filter>sens_itf</Filter>
-    </ClCompile>
-    <ClCompile Include="sens_itf_sensor.c">
-      <Filter>sens_itf</Filter>
-    </ClCompile>
     <ClCompile Include="sens_itf_unity_test.c">
-      <Filter>sens_itf</Filter>
+      <Filter>osens_itf</Filter>
     </ClCompile>
     <ClCompile Include="..\os\os_timer.c">
       <Filter>os</Filter>
@@ -129,13 +123,22 @@
       <Filter>os</Filter>
     </ClCompile>
     <ClCompile Include="main.c">
-      <Filter>sens_itf</Filter>
+      <Filter>osens_itf</Filter>
     </ClCompile>
     <ClCompile Include="..\os\os_serial.c">
       <Filter>os</Filter>
     </ClCompile>
     <ClCompile Include="..\os\os_util.c">
       <Filter>os</Filter>
+    </ClCompile>
+    <ClCompile Include="osens_itf.c">
+      <Filter>osens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="osens_itf_mote.c">
+      <Filter>osens_itf</Filter>
+    </ClCompile>
+    <ClCompile Include="osens_itf_sensor.c">
+      <Filter>osens_itf</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
