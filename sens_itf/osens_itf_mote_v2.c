@@ -297,7 +297,6 @@ static uint8_t osens_mote_sm_func_req_pt_val(osens_mote_sm_state_t *st)
     if (st->retries > 3)
         return OSENS_STATE_EXEC_ERROR;
 
-    // normal point reading
     point = acquisition_schedule.scan.index[st->point_index];
     cmd.hdr.addr = OSENS_REGMAP_READ_POINT_DATA_1 + point;
     st->trmout_counter = 0;
@@ -320,9 +319,13 @@ static uint8_t osens_mote_sm_func_run_sch(osens_mote_sm_state_t *st)
 
         if (acquisition_schedule.points[n].counter == 0)
         {
-            acquisition_schedule.scan.index[acquisition_schedule.scan.num_of_points] = n;
+            // n: point index in the schedule database
+            // index: point index in the points database
+            uint8_t index = acquisition_schedule.points[n].index;
+
+            acquisition_schedule.scan.index[acquisition_schedule.scan.num_of_points] = index;
             acquisition_schedule.scan.num_of_points++;
-            // restore counter value
+            // restore counter value for next cycle
             acquisition_schedule.points[n].counter = acquisition_schedule.points[n].sampling_time_x250ms;
         }
 
@@ -340,7 +343,7 @@ static uint8_t osens_mote_sm_func_run_sch(osens_mote_sm_state_t *st)
             OS_UTIL_LOG(1, ("=========\n"));
             for (n = 0; n < acquisition_schedule.scan.num_of_points; n++)
             {
-                OS_UTIL_LOG(1, ("--> %u\n", acquisition_schedule.scan.index[n]));
+                OS_UTIL_LOG(1, ("--> %u [%u]\n", n,acquisition_schedule.scan.index[n]));
             }
     }
 #endif
@@ -394,7 +397,9 @@ static uint8_t osens_mote_sm_func_pt_desc_ans(osens_mote_sm_state_t *st)
     if (size != ans_size || (ans.hdr.addr != OSENS_REGMAP_POINT_DESC_1 + st->point_index))
         return OSENS_STATE_EXEC_ERROR;
 
+    // save description and type, value is not available yet
     memcpy(&sensor_points.points[st->point_index].desc, &ans.payload.point_desc_cmd, sizeof(osens_point_desc_t));
+    sensor_points.points[st->point_index].value.type = sensor_points.points[st->point_index].desc.type;
 
 #if TRACE_ON
     {
