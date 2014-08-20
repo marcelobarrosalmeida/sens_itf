@@ -164,7 +164,7 @@ int os_serial_read_byte(os_serial_t ser, unsigned char *data)
         if (dwRead == sizeof(unsigned char)) 
 		{
 			OS_UTIL_LOG( OS_DBG_SER_DRV, ("Serial IN: %02X\n", *data ) );
-      return 1;
+            return 1;
 		}
 	}
 

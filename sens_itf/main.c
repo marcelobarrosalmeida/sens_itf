@@ -11,11 +11,12 @@ void setUp(void) {}
 void tearDown(void) {}
 
 extern void osens_sensor_main(void);
+extern uint8_t osens_mote_init_v2(void);
 
 int main(void)
 {
     os_util_log_start();
-    osens_mote_main();
+    osens_mote_init_v2();
     os_util_log_stop();
     
     return 0;

@@ -55,6 +55,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EntryPointSymbol>main</EntryPointSymbol>
+      <AdditionalDependencies>kernel32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -117,6 +118,7 @@
     <ClCompile Include="main.c" />
     <ClCompile Include="osens_itf.c" />
     <ClCompile Include="osens_itf_mote.c" />
+    <ClCompile Include="osens_itf_mote_v2.c" />
     <ClCompile Include="osens_itf_sensor.c" />
     <ClCompile Include="sens_itf_unity_test.c" />
   </ItemGroup>

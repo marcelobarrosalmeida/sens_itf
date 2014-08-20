@@ -440,7 +440,7 @@ static void osens_mote_show_values(void)
 
 void osens_mote_main(void)
 {
-    os_serial_options_t serial_options = { OS_SERIAL_BR_115200, OS_SERIAL_PR_NONE, OS_SERIAL_PB_1, 29 };
+    os_serial_options_t serial_options = { OS_SERIAL_BR_115200, OS_SERIAL_PR_NONE, OS_SERIAL_PB_1, 21 };
     uint32_t n = 3;
 
     while (n > 0)
