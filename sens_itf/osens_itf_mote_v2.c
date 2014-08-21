@@ -32,6 +32,7 @@ enum {
     OSENS_STATE_PROC_PT_VAL = 14
 };
 
+#if TRACE_ON == 1
 uint8_t *sm_states_str[] = {
     "INIT",
     "SEND_ITF_VER",
@@ -49,6 +50,8 @@ uint8_t *sm_states_str[] = {
     "WAIT_PT_VAL_ANS",
     "PROC_PT_VAL"
 };
+#endif
+
 enum {
     OSENS_STATE_EXEC_OK = 0,
     OSENS_STATE_EXEC_WAIT_OK,
@@ -151,7 +154,7 @@ uint8_t osens_mote_send_frame(uint8_t *frame, uint8_t size)
     return (sent < 0 ? 0 : (uint8_t) sent); // CHECK AGAIN
 }
 
-#if TRACE_ON
+#if TRACE_ON == 1
 static void osens_mote_show_values(void)
 {
     uint8_t n;
@@ -277,7 +280,7 @@ static uint8_t osens_mote_sm_func_pt_val_ans(osens_mote_sm_state_t *st)
     st->retries = 0;
     st->point_index++;
 
-#if TRACE_ON
+#if TRACE_ON == 1
     osens_mote_show_values();
 #endif
 
@@ -336,7 +339,7 @@ static uint8_t osens_mote_sm_func_run_sch(osens_mote_sm_state_t *st)
         st->point_index = 0;
         st->retries = 0;
 
-#if TRACE_ON
+#if TRACE_ON == 1
     {
             OS_UTIL_LOG(1, ("\n"));
             OS_UTIL_LOG(1, ("Next Scan\n"));
@@ -374,7 +377,7 @@ static uint8_t osens_mote_sm_func_build_sch(osens_mote_sm_state_t *st)
         }
     }
 
-#if TRACE_ON
+#if TRACE_ON == 1
     OS_UTIL_LOG(1,("\n"));
     OS_UTIL_LOG(1, ("Schedule\n"));
     OS_UTIL_LOG(1, ("========\n"));
@@ -401,7 +404,7 @@ static uint8_t osens_mote_sm_func_pt_desc_ans(osens_mote_sm_state_t *st)
     memcpy(&sensor_points.points[st->point_index].desc, &ans.payload.point_desc_cmd, sizeof(osens_point_desc_t));
     sensor_points.points[st->point_index].value.type = sensor_points.points[st->point_index].desc.type;
 
-#if TRACE_ON
+#if TRACE_ON == 1
     {
         uint8_t n = st->point_index;
         OS_UTIL_LOG(1, ("\n"));
@@ -455,7 +458,7 @@ static uint8_t osens_mote_sm_func_proc_brd_id_ans(osens_mote_sm_state_t *st)
     if ((board_info.num_of_points == 0) || (board_info.num_of_points > OSENS_MAX_POINTS))
         return OSENS_STATE_EXEC_ERROR;
 
-#if TRACE_ON
+#if TRACE_ON == 1
     OS_UTIL_LOG(1, ("\n"));
     OS_UTIL_LOG(1, ("Board info\n"));
     OS_UTIL_LOG(1, ("==========\n"));
@@ -568,7 +571,7 @@ void osens_mote_sm(void)
 {
     uint8_t ret;
 
-#ifdef TRACE_ON
+#if TRACE_ON == 1
     uint8_t ls = sm_state.state;
 #endif
 
@@ -605,7 +608,7 @@ void osens_mote_sm(void)
         break;
     }
 
-#ifdef TRACE_ON
+#if TRACE_ON == 1
     printf("[SM]  %llu    (%02d) %-16s -> (%02d) %-16s\n", tick_counter, ls, sm_states_str[ls], sm_state.state,sm_states_str[sm_state.state]);
 #endif
 
