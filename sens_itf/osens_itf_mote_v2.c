@@ -29,7 +29,10 @@ enum {
     OSENS_STATE_RUN_SCH = 11,
     OSENS_STATE_SEND_PT_VAL = 12,
     OSENS_STATE_WAIT_PT_VAL_ANS = 13,
-    OSENS_STATE_PROC_PT_VAL = 14
+    OSENS_STATE_PROC_PT_VAL = 14,
+    OSENS_STATE_WR_PT = 15,
+    OSENS_STATE_WAIT_WR_PT_ANS = 16,
+    OSENS_STATE_PROC_WR_PT_ANS = 17
 };
 
 #if TRACE_ON == 1
@@ -48,7 +51,10 @@ uint8_t *sm_states_str[] = {
     "RUN_SCH",
     "SEND_PT_VAL",
     "WAIT_PT_VAL_ANS",
-    "PROC_PT_VAL"
+    "PROC_PT_VAL",
+    "WR_PT",
+    "WAIT_WR_PT_ANS",
+    "PROC_WR_PT_ANS"
 };
 #endif
 
@@ -83,19 +89,28 @@ typedef struct osens_mote_sm_table_s
 typedef struct osens_acq_schedule_s
 {
     uint8_t num_of_points;
-    struct
+    struct points_e
     {
         uint8_t index;
         uint32_t sampling_time_x250ms;
         uint32_t counter;
     } points[OSENS_MAX_POINTS];
 
-    struct
+    struct scan_e
     {
         uint8_t num_of_points;
         uint8_t index[OSENS_MAX_POINTS];
     } scan;
+
+    struct write_e
+    {
+        uint8_t prod;
+        uint8_t cons;
+        uint8_t index[OSENS_MAX_POINTS];
+    } write;
 } osens_acq_schedule_t;
+
+#define PC_INC_QUEUE(v,mv) (((v) + 1) >= (mv)) ? 0 : (v) + 1
 
 static uint8_t osens_mote_sm_func_build_sch(osens_mote_sm_state_t *st);
 static uint8_t osens_mote_sm_func_pt_desc_ans(osens_mote_sm_state_t *st);
@@ -117,7 +132,7 @@ osens_cmd_res_t ans;
 osens_mote_sm_state_t sm_state;
 osens_point_ctrl_t sensor_points;
 osens_brd_id_t board_info;
-osens_acq_schedule_t acquisition_schedule;
+osens_acq_schedule_t schedule;
 
 static os_thread_t sm_thread;
 static os_thread_t rx_thread;
@@ -195,7 +210,7 @@ static void osens_mote_show_values(void)
             break;
         default:
             break;
-       }
+        }
     }
 }
 #endif
@@ -205,7 +220,7 @@ void* osens_mote_rx_serial(void *p)
     unsigned char data;
     while (1)
     {
-        if (os_serial_read_byte(serial,&data))
+        if (os_serial_read_byte(serial, &data))
         {
             if (num_rx_bytes < OSENS_MAX_FRAME_SIZE)
                 frame[num_rx_bytes] = (uint8_t) data;
@@ -224,7 +239,7 @@ void* osens_mote_rx_serial(void *p)
 
 uint8_t osens_mote_init_v2(void)
 {
-    os_serial_options_t serial_options = { OS_SERIAL_BR_115200, OS_SERIAL_PR_NONE, OS_SERIAL_PB_1, 30 };
+    os_serial_options_t serial_options = { OS_SERIAL_BR_115200, OS_SERIAL_PR_NONE, OS_SERIAL_PB_1, 27 };
 
     serial = os_serial_open(serial_options);
 
@@ -265,7 +280,7 @@ static uint8_t osens_mote_sm_func_pt_val_ans(osens_mote_sm_state_t *st)
     uint8_t size;
     uint8_t ans_size;
 
-    point = acquisition_schedule.scan.index[st->point_index];
+    point = schedule.scan.index[st->point_index];
     ans_size = 6 + datatype_sizes[sensor_points.points[point].desc.type];
 
     size = osens_unpack_cmd_res(&ans, frame, ans_size);
@@ -292,7 +307,7 @@ static uint8_t osens_mote_sm_func_req_pt_val(osens_mote_sm_state_t *st)
     uint8_t point;
 
     // end of point reading
-    if (st->point_index >= acquisition_schedule.scan.num_of_points)
+    if (st->point_index >= schedule.scan.num_of_points)
         return OSENS_STATE_EXEC_WAIT_ABORT;
 
     // error condition after 3 retries
@@ -300,7 +315,7 @@ static uint8_t osens_mote_sm_func_req_pt_val(osens_mote_sm_state_t *st)
     if (st->retries > 3)
         return OSENS_STATE_EXEC_ERROR;
 
-    point = acquisition_schedule.scan.index[st->point_index];
+    point = schedule.scan.index[st->point_index];
     cmd.hdr.addr = OSENS_REGMAP_READ_POINT_DATA_1 + point;
     st->trmout_counter = 0;
     st->trmout = MS2TICK(5000);
@@ -308,47 +323,112 @@ static uint8_t osens_mote_sm_func_req_pt_val(osens_mote_sm_state_t *st)
 
 }
 
+static uint8_t osens_mote_sm_func_proc_wr_pt(osens_mote_sm_state_t *st)
+{
+    uint8_t point;
+    uint8_t size;
+    uint8_t ans_size = 5;
+
+    point = schedule.write.index[st->point_index];
+
+    size = osens_unpack_cmd_res(&ans, frame, ans_size);
+
+    // retry ?
+    if (size != ans_size || ans.hdr.addr != (OSENS_REGMAP_WRITE_POINT_DATA_1 + point))
+        return OSENS_STATE_EXEC_OK;
+
+    // ok,  go to the next
+    schedule.write.cons = PC_INC_QUEUE(schedule.write.cons, OSENS_MAX_POINTS);
+    st->retries = 0;
+
+    return OSENS_STATE_EXEC_OK;
+}
+
+static uint8_t osens_mote_sm_func_wr_pt(osens_mote_sm_state_t *st)
+{
+    uint8_t point;
+    uint8_t c = schedule.write.cons;
+    uint8_t p = schedule.write.prod;
+    uint8_t size;
+
+    // end of point writing
+    if (c == p)
+        return OSENS_STATE_EXEC_WAIT_ABORT;
+
+    // error condition after 3 retries
+    st->retries++;
+    if (st->retries > 3)
+        return OSENS_STATE_EXEC_ERROR;
+
+#if TRACE_ON == 1
+    printf("==> Consuming at position %d\n", c);
+#endif
+
+    st->point_index = c;
+    point = schedule.write.index[st->point_index];
+    cmd.hdr.addr = OSENS_REGMAP_WRITE_POINT_DATA_1 + point;
+    st->trmout_counter = 0;
+    st->trmout = MS2TICK(5000);
+
+    size = 5 + datatype_sizes[sensor_points.points[point].desc.type];
+    memcpy(&cmd.payload.point_value_cmd, &sensor_points.points[point].value, sizeof(osens_point_t));
+
+    return osens_mote_pack_send_frame(&cmd, size);
+}
+
 static uint8_t osens_mote_sm_func_run_sch(osens_mote_sm_state_t *st)
 {
     uint8_t n;
 
-    acquisition_schedule.scan.num_of_points = 0;
+    //leds_error_toggle();
 
-    for (n = 0; n < acquisition_schedule.num_of_points; n++)
+    // priorize writings over data scan/schedule execution
+    if (schedule.write.prod != schedule.write.cons)
+    {
+#if TRACE_ON == 1
+        printf("==> New writing item to be consumed (P: %d <> C: d%)\n", schedule.write.prod, schedule.write.cons);
+#endif
+        st->retries = 0;
+        return OSENS_STATE_EXEC_ERROR;
+    }
+
+    schedule.scan.num_of_points = 0;
+
+    for (n = 0; n < schedule.num_of_points; n++)
     {
 
-        if (acquisition_schedule.points[n].counter > 0)
-            acquisition_schedule.points[n].counter--;
+        if (schedule.points[n].counter > 0)
+            schedule.points[n].counter--;
 
-        if (acquisition_schedule.points[n].counter == 0)
+        if (schedule.points[n].counter == 0)
         {
             // n: point index in the schedule database
             // index: point index in the points database
-            uint8_t index = acquisition_schedule.points[n].index;
+            uint8_t index = schedule.points[n].index;
 
-            acquisition_schedule.scan.index[acquisition_schedule.scan.num_of_points] = index;
-            acquisition_schedule.scan.num_of_points++;
+            schedule.scan.index[schedule.scan.num_of_points] = index;
+            schedule.scan.num_of_points++;
             // restore counter value for next cycle
-            acquisition_schedule.points[n].counter = acquisition_schedule.points[n].sampling_time_x250ms;
+            schedule.points[n].counter = schedule.points[n].sampling_time_x250ms;
         }
 
     }
 
-    if (acquisition_schedule.scan.num_of_points > 0)
+    if (schedule.scan.num_of_points > 0)
     {
         st->point_index = 0;
         st->retries = 0;
 
 #if TRACE_ON == 1
-    {
+        {
             OS_UTIL_LOG(1, ("\n"));
             OS_UTIL_LOG(1, ("Next Scan\n"));
             OS_UTIL_LOG(1, ("=========\n"));
-            for (n = 0; n < acquisition_schedule.scan.num_of_points; n++)
+            for (n = 0; n < schedule.scan.num_of_points; n++)
             {
-                OS_UTIL_LOG(1, ("--> %u [%u]\n", n,acquisition_schedule.scan.index[n]));
+                OS_UTIL_LOG(1, ("--> %u [%u]\n", n, schedule.scan.index[n]));
             }
-    }
+        }
 #endif
 
         return OSENS_STATE_EXEC_WAIT_ABORT;
@@ -361,29 +441,29 @@ static uint8_t osens_mote_sm_func_build_sch(osens_mote_sm_state_t *st)
 {
     uint8_t n, m;
 
-    acquisition_schedule.num_of_points = 0;
+    schedule.num_of_points = 0;
 
     for (n = 0, m = 0; n < board_info.num_of_points; n++)
     {
         if ((sensor_points.points[n].desc.access_rights & OSENS_ACCESS_READ_ONLY) &&
             (sensor_points.points[n].desc.sampling_time_x250ms > 0))
         {
-            acquisition_schedule.points[m].index = n;
-            acquisition_schedule.points[m].counter = sensor_points.points[n].desc.sampling_time_x250ms;
-            acquisition_schedule.points[m].sampling_time_x250ms = sensor_points.points[n].desc.sampling_time_x250ms;
+            schedule.points[m].index = n;
+            schedule.points[m].counter = sensor_points.points[n].desc.sampling_time_x250ms;
+            schedule.points[m].sampling_time_x250ms = sensor_points.points[n].desc.sampling_time_x250ms;
 
             m++;
-            acquisition_schedule.num_of_points++;
+            schedule.num_of_points++;
         }
     }
 
 #if TRACE_ON == 1
-    OS_UTIL_LOG(1,("\n"));
+    OS_UTIL_LOG(1, ("\n"));
     OS_UTIL_LOG(1, ("Schedule\n"));
     OS_UTIL_LOG(1, ("========\n"));
-    for (n = 0; n < acquisition_schedule.num_of_points; n++)
+    for (n = 0; n < schedule.num_of_points; n++)
     {
-        OS_UTIL_LOG(1, ("[%d] point %02d at %dms\n", n, acquisition_schedule.points[n].index, acquisition_schedule.points[n].sampling_time_x250ms * 250));
+        OS_UTIL_LOG(1, ("[%d] point %02d at %dms\n", n, schedule.points[n].index, schedule.points[n].sampling_time_x250ms * 250));
     }
 #endif
 
@@ -555,11 +635,13 @@ static uint8_t osens_mote_sm_func_init(osens_mote_sm_state_t *st)
 {
     uint8_t ret = OSENS_STATE_EXEC_OK;
 
+    //leds_error_on();
+
     memset(&cmd, 0, sizeof(cmd));
     memset(&ans, 0, sizeof(ans));
     memset(&sensor_points, 0, sizeof(sensor_points));
     memset(&board_info, 0, sizeof(board_info));
-    memset(&acquisition_schedule, 0, sizeof(acquisition_schedule));
+    memset(&schedule, 0, sizeof(schedule));
     memset(st, 0, sizeof(osens_mote_sm_state_t));
 
     num_rx_bytes = 0;
@@ -580,12 +662,12 @@ void osens_mote_sm(void)
     /*
     if (flagErrorOccurred)
     {
-        //reset uart
-        uart1_clearTxInterrupts();
-        uart1_clearRxInterrupts();      // clear possible pending interrupts
-        uart1_enableInterrupts();       // Enable USCI_A1 TX & RX interrupt
+    //reset uart
+    uart1_clearTxInterrupts();
+    uart1_clearRxInterrupts();      // clear possible pending interrupts
+    uart1_enableInterrupts();       // Enable USCI_A1 TX & RX interrupt
 
-        flagErrorOccurred = 0;
+    flagErrorOccurred = 0;
     }
     */
 
@@ -609,7 +691,23 @@ void osens_mote_sm(void)
     }
 
 #if TRACE_ON == 1
-    printf("[SM]  %llu    (%02d) %-16s -> (%02d) %-16s\n", tick_counter, ls, sm_states_str[ls], sm_state.state,sm_states_str[sm_state.state]);
+    printf("[SM]  %llu    (%02d) %-16s -> (%02d) %-16s\n", tick_counter, ls, sm_states_str[ls], sm_state.state, sm_states_str[sm_state.state]);
+
+    {
+        uint8_t index = 1;
+        osens_point_t point;
+
+        if (sensor_points.points[0].value.value.u8 >= 90 && sensor_points.points[1].value.value.u8 == 0)
+        {
+            point.value.u8 = 1;
+            osens_set_pvalue(index, &point);
+        }
+        if (sensor_points.points[0].value.value.u8 < 90 && sensor_points.points[1].value.value.u8 == 1)
+        {
+            point.value.u8 = 0;
+            osens_set_pvalue(index, &point);
+        }
+    }
 #endif
 
 }
@@ -627,14 +725,108 @@ const osens_mote_sm_table_t osens_mote_sm_table[] =
     { osens_mote_sm_func_wait_ans, OSENS_STATE_PROC_PT_DESC, OSENS_STATE_SEND_PT_DESC, OSENS_STATE_INIT }, // OSENS_STATE_WAIT_PT_DESC_ANS
     { osens_mote_sm_func_pt_desc_ans, OSENS_STATE_SEND_PT_DESC, OSENS_STATE_INIT, OSENS_STATE_INIT }, // OSENS_STATE_PROC_PT_DESC
     { osens_mote_sm_func_build_sch, OSENS_STATE_RUN_SCH, OSENS_STATE_INIT, OSENS_STATE_INIT }, // OSENS_STATE_BUILD_SCH
-    { osens_mote_sm_func_run_sch, OSENS_STATE_RUN_SCH, OSENS_STATE_SEND_PT_VAL, OSENS_STATE_INIT }, // OSENS_STATE_RUN_SCH
+    { osens_mote_sm_func_run_sch, OSENS_STATE_RUN_SCH, OSENS_STATE_SEND_PT_VAL, OSENS_STATE_WR_PT }, // OSENS_STATE_RUN_SCH
     { osens_mote_sm_func_req_pt_val, OSENS_STATE_WAIT_PT_VAL_ANS, OSENS_STATE_RUN_SCH, OSENS_STATE_INIT }, // OSENS_STATE_SEND_PT_VAL
     { osens_mote_sm_func_wait_ans, OSENS_STATE_PROC_PT_VAL, OSENS_STATE_SEND_PT_VAL, OSENS_STATE_INIT }, // OSENS_STATE_WAIT_PT_VAL_ANS
     { osens_mote_sm_func_pt_val_ans, OSENS_STATE_SEND_PT_VAL, OSENS_STATE_INIT, OSENS_STATE_INIT }, // OSENS_STATE_PROC_PT_VAL
+    { osens_mote_sm_func_wr_pt, OSENS_STATE_WAIT_WR_PT_ANS, OSENS_STATE_RUN_SCH, OSENS_STATE_INIT }, // OSENS_STATE_WR_PT
+    { osens_mote_sm_func_wait_ans, OSENS_STATE_PROC_WR_PT_ANS, OSENS_STATE_WR_PT, OSENS_STATE_INIT }, // OSENS_STATE_WAIT_WR_PT_ANS
+    { osens_mote_sm_func_proc_wr_pt, OSENS_STATE_WR_PT, OSENS_STATE_INIT, OSENS_STATE_INIT } // OSENS_STATE_PROC_WR_PT_ANS
 };
 
 uint8_t osens_init(void)
 {
     osens_mote_init_v2();
     return 0;
+}
+
+uint8_t osens_get_num_points(void)
+{
+    if (sm_state.state >= OSENS_STATE_SEND_PT_DESC)
+    {
+        return board_info.num_of_points;
+    }
+    else
+        return 0;
+}
+
+uint8_t osens_get_brd_desc(osens_brd_id_t *brd)
+{
+    if (sm_state.state >= OSENS_STATE_SEND_PT_DESC)
+    {
+        memcpy(brd, &board_info, sizeof(osens_brd_id_t));
+        return 1;
+    }
+    else
+        return 0;
+}
+
+uint8_t osens_get_pdesc(uint8_t index, osens_point_desc_t *desc)
+{
+    if ((sm_state.state >= OSENS_STATE_RUN_SCH) && (index < sensor_points.num_of_points))
+    {
+        memcpy(desc, &sensor_points.points[index].desc, sizeof(osens_point_desc_t));
+        return 1;
+    }
+    else
+        return 0;
+}
+
+int8_t osens_get_ptype(uint8_t index)
+{
+    if ((sm_state.state >= OSENS_STATE_RUN_SCH) && (index < sensor_points.num_of_points))
+    {
+        return sensor_points.points[index].value.type;
+    }
+    else
+        return -1;
+}
+
+uint8_t osens_get_point(uint8_t index, osens_point_t *point)
+{
+    if ((sm_state.state >= OSENS_STATE_RUN_SCH) && (index < sensor_points.num_of_points))
+    {
+        memcpy(point, &sensor_points.points[index].value, sizeof(osens_point_t));
+        return 1;
+    }
+    else
+        return 0;
+}
+
+uint8_t osens_set_pvalue(uint8_t index, osens_point_t *point)
+{
+    if ((sm_state.state >= OSENS_STATE_RUN_SCH) && (index < sensor_points.num_of_points))
+    {
+        if (sensor_points.points[index].desc.access_rights & OSENS_ACCESS_WRITE_ONLY)
+        {
+            uint8_t pn;
+            uint8_t p = schedule.write.prod;
+            uint8_t c = schedule.write.cons;
+
+            pn = PC_INC_QUEUE(p, OSENS_MAX_POINTS);
+
+            // no space in prod/cons queue (check next)
+            if (pn == c)
+            {
+#if TRACE_ON == 1
+                printf("==> No space in writing queue (P: %d->%d, C: %d)\n",p,pn,c);
+#endif
+                return 0;
+            }
+
+#if TRACE_ON == 1
+            printf("==> Producing at position %d\n", p);
+#endif
+            // schedule point for writing and update value
+            schedule.write.index[p] = index;
+            sensor_points.points[index].value.value = point->value;
+            schedule.write.prod = pn;
+
+            return 1;
+        }
+        else
+            return 0;
+    }
+    else
+        return 0;
 }
